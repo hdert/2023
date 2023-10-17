@@ -36,7 +36,7 @@ double evaluate(char operator, double value_1, double value_2)
         return value_1 * value_2;
         break;
     case EXPONENTIATION:
-        return pow(value_1, value_2); // Broken, or maybe not?
+        return pow(value_1, value_2);
         break;
     case MODULUS:
         if (value_2 == 0)
@@ -55,6 +55,7 @@ double evaluate(char operator, double value_1, double value_2)
 void get_input(char *buffer, int bufferSize)
 {
     bool isOperator = true;
+    // Start true to check if it starts with an operator
     bool successful = false;
     while (!successful)
     {
@@ -110,8 +111,6 @@ void get_input(char *buffer, int bufferSize)
 int getNumber(char *input, int inputSize, int *i)
 {
     int number = 0;
-    // printf("%d", inputSize);
-    // printf("%c", input[*i]);
     for (; *i < inputSize; (*i)++)
     {
         if (!isdigit(input[*i]))
@@ -152,7 +151,7 @@ double evaluateString(char *input, int inputSize)
     char operator;
     int i = 0;
     result = getNumber(input, inputSize, &i);
-    for (; i < inputSize && input[i] != '\000';)
+    while (i < inputSize && input[i] != '\000')
     {
         operator= getOperator(input, inputSize, &i);
         result = evaluate(operator, result, getNumber(input, inputSize, &i));

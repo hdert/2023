@@ -4,7 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 
-enum operators
+typedef enum
 {
     ADDITION = '+',
     SUBTRACTION = '-',
@@ -14,7 +14,7 @@ enum operators
     EXPONENTIATION = '^',
     // ALT_EXPONENTIATION = '**',
     MODULUS = '%',
-};
+} operators;
 
 double evaluate(char operator, double value_1, double value_2)
 {

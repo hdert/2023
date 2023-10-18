@@ -1,13 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "LinkedList.h"
 
-struct Node
-{
-    int value;
-    struct Node *ptr;
-};
-
-void _LinkedList_print_helper(struct Node *LinkedList)
+void _LinkedList_print_helper(Node *LinkedList)
 {
     printf(", %d", LinkedList->value);
     if (LinkedList->ptr != NULL)
@@ -16,7 +11,7 @@ void _LinkedList_print_helper(struct Node *LinkedList)
     }
 }
 
-void LinkedList_print(struct Node *LinkedList)
+void LinkedList_print(Node *LinkedList)
 {
     printf("{%d", LinkedList->value);
     if (LinkedList->ptr != NULL)
@@ -26,11 +21,11 @@ void LinkedList_print(struct Node *LinkedList)
     printf("}\n");
 }
 
-void LinkedList_append(struct Node *LinkedList, int value)
+void LinkedList_append(Node *LinkedList, int value)
 {
     if (LinkedList->ptr == NULL)
     {
-        LinkedList->ptr = (struct Node *)malloc(sizeof(struct Node));
+        LinkedList->ptr = (Node *)malloc(sizeof(Node));
         LinkedList->ptr->value = value;
         return;
     }
@@ -39,7 +34,7 @@ void LinkedList_append(struct Node *LinkedList, int value)
 
 int main(void)
 {
-    struct Node *HEAD, LinkedList = {11, NULL};
+    Node *HEAD, LinkedList = {11, NULL};
     HEAD = &LinkedList;
     LinkedList_print(HEAD);
     LinkedList_append(HEAD, 12);
@@ -50,5 +45,8 @@ int main(void)
         LinkedList_append(HEAD, nums[i]);
     }
     LinkedList_print(HEAD);
+    Node *Empty_HEAD, Empty_LinkedList;
+    Empty_HEAD = &Empty_LinkedList;
+    LinkedList_print(Empty_HEAD);
     return 0;
 }

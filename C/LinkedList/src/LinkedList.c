@@ -7,7 +7,6 @@
                         TODO
 Write prepend function - could be same as add function
 Write add function
-Write find index function
 */
 
 static void _LinkedList_print_helper(Node *LinkedList)
@@ -144,6 +143,31 @@ int LinkedList_get(Head HEAD, int index)
     return _LinkedList_get_helper(HEAD.ptr, index);
 }
 
+static bool _LinkedList_find_helper(Node *LinkedList, int key, int *index)
+{
+    if (LinkedList->value == key)
+    {
+        return true;
+    }
+    if (LinkedList->ptr == NULL)
+    {
+        return false;
+    }
+    (*index)++;
+    _LinkedList_find_helper(LinkedList->ptr, key, index);
+}
+
+bool LinkedList_find(Head HEAD, int key, int *index)
+{
+    *index = 0;
+    if (HEAD.ptr == NULL)
+    {
+        printf("Linked list empty!\n");
+        return false;
+    }
+    return _LinkedList_find_helper(HEAD.ptr, key, index);
+}
+
 int main(void)
 {
     // Node LinkedList = {11, NULL}; // DO NOT DO THIS, you cannot free it later!
@@ -174,6 +198,22 @@ int main(void)
     printf("Get: %d\n", LinkedList_get(HEAD, 1));               // Get: 2
     printf("Get: %d\n", LinkedList_get(HEAD, HEAD.length - 1)); // Get: 643
     printf("Get: %d\n", LinkedList_get(HEAD, HEAD.length));     // Index out of bounds!\nGet: 0
+    int index;
+    bool result = LinkedList_find(HEAD, 12, &index);
+    printf(result // Found: 0
+               ? "Found: %d\n"
+               : "Not Found: %d\n",
+           index);
+    result = LinkedList_find(HEAD, 643, &index);
+    printf(result // Found: 12
+               ? "Found: %d\n"
+               : "Not Found: %d\n",
+           index);
+    result = LinkedList_find(HEAD, 0, &index);
+    printf(result // Not Found: 12
+               ? "Found: %d\n"
+               : "Not Found: %d\n",
+           index);
 
     // ****************** Empty_HEAD ******************
 
@@ -203,6 +243,11 @@ int main(void)
     LinkedList_print(Empty_HEAD);                                       // {}
     printf("Length: %d\n", Empty_HEAD.length);                          // Length: 0
     printf("%d\n", LinkedList_pop(&Empty_HEAD, Empty_HEAD.length - 1)); // Linked list empty!\n0
+    result = LinkedList_find(Empty_HEAD, 0, &index);
+    printf(result // Linked list empty!\nNot Found: 0
+               ? "Found: %d\n"
+               : "Not Found: %d\n",
+           index);
     // fprintf(stderr, "%p\n", Empty_HEAD.ptr);
 
     // ****************** MemLeak_HEAD ******************

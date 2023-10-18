@@ -1,8 +1,13 @@
+CC = zig cc
 SHELL = /bin/sh
 .SUFFIXES:
-.SUFFIXES: .c .out .h
+.SUFFIXES: .c .o .h
 
-LinkedListTests: src/Tests.c
-	zig cc src/Tests.c src/LinkedList.c -o .build/Tests.out
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --log-file=./.build/valgrind-out.txt ./.build/Tests.out
-	
+BUILD = .build
+EXE = Tests
+SRC = src
+LIBRARIES = 
+
+$(BUILD)/$(EXE).o: $(SRC)/*.c
+	$(CC) $^ -o $@ $(LIBRARIES)
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --log-file=./.build/valgrind-out.txt ./.build/Tests.o

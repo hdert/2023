@@ -287,6 +287,7 @@ int main(void)
     LinkedList_add(&Empty_HEAD, 4, 1);
     LinkedList_print(Empty_HEAD); // {2, 4, 1, 3}
     LinkedList_pop(&Empty_HEAD, 0);
+    LinkedList_print(Empty_HEAD); // {4, 1, 3}
     LinkedList_pop(&Empty_HEAD, 0);
     LinkedList_pop(&Empty_HEAD, 0);
     LinkedList_pop(&Empty_HEAD, 0);

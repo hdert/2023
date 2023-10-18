@@ -15,6 +15,8 @@ typedef struct Head
 
 void LinkedList_print(Head Head);
 
+void LinkedList_add(Head *HEAD, int value, int index);
+
 void LinkedList_append(Head *HEAD, int value);
 
 int LinkedList_pop(Head *HEAD, int index);

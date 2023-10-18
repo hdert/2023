@@ -3,12 +3,6 @@
 #include <stdbool.h>
 #include "LinkedList.h"
 
-/*
-                        TODO
-Write prepend function - could be same as add function
-Write add function
-*/
-
 static void _LinkedList_print_helper(Node *LinkedList)
 {
     printf(", %d", LinkedList->value);
@@ -56,6 +50,43 @@ void LinkedList_append(Head *HEAD, int value)
         return;
     }
     _LinkedList_append_helper(HEAD->ptr, value);
+}
+
+static void _LinkedList_add_helper(Node **LinkedList, int value, int index)
+{
+    if (index == 0)
+    {
+        Node *temp = *LinkedList;
+        *LinkedList = (Node *)malloc(sizeof(Node));
+        (*LinkedList)->ptr = temp;
+        (*LinkedList)->value = value;
+        return;
+    }
+    if ((*LinkedList)->ptr == NULL)
+    {
+        printf("Index out of bounds!\n");
+        return;
+    }
+    _LinkedList_add_helper(&(*LinkedList)->ptr, value, index - 1);
+}
+
+void LinkedList_add(Head *HEAD, int value, int index)
+{
+    if (index > HEAD->length)
+    {
+        printf("Index out of bounds!\n");
+        return;
+    }
+    if (index == HEAD->length)
+    {
+        LinkedList_append(HEAD, value);
+        return;
+    }
+    else
+    {
+        _LinkedList_add_helper(&(HEAD->ptr), value, index);
+    }
+    HEAD->length++;
 }
 
 static bool _LinkedList_pop_helper(Node **LinkedList, int index, int *value)
@@ -248,6 +279,19 @@ int main(void)
                ? "Found: %d\n"
                : "Not Found: %d\n",
            index);
+    LinkedList_add(&Empty_HEAD, 1, 0);
+    LinkedList_add(&Empty_HEAD, 2, 0);
+    LinkedList_print(Empty_HEAD); // {2, 1}
+    LinkedList_add(&Empty_HEAD, 3, Empty_HEAD.length);
+    LinkedList_print(Empty_HEAD); // {2, 1, 3}
+    LinkedList_add(&Empty_HEAD, 4, 1);
+    LinkedList_print(Empty_HEAD); // {2, 4, 1, 3}
+    LinkedList_pop(&Empty_HEAD, 0);
+    LinkedList_pop(&Empty_HEAD, 0);
+    LinkedList_pop(&Empty_HEAD, 0);
+    LinkedList_pop(&Empty_HEAD, 0);
+    LinkedList_add(&Empty_HEAD, 5, Empty_HEAD.length);
+    LinkedList_print(Empty_HEAD); // {5}
     // fprintf(stderr, "%p\n", Empty_HEAD.ptr);
 
     // ****************** MemLeak_HEAD ******************

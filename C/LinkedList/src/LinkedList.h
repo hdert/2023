@@ -21,4 +21,8 @@ int LinkedList_pop(Head *HEAD, int index);
 
 void LinkedList_free(Head *HEAD);
 
+int LinkedList_get(Head HEAD, int index);
+
+bool LinkedList_find(Head HEAD, int key, int *index);
+
 #endif // LINKEDLIST_H

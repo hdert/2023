@@ -7,7 +7,6 @@
                         TODO
 Write prepend function - could be same as add function
 Write add function
-Write get at index function
 Write find index function
 */
 
@@ -80,14 +79,14 @@ static bool _LinkedList_pop_helper(Node **LinkedList, int index, int *value)
 
 int LinkedList_pop(Head *HEAD, int index)
 {
-    if (index > HEAD->length - 1)
-    {
-        printf("Index out of bounds!\n");
-        return 0;
-    }
     if (HEAD->ptr == NULL)
     {
         printf("Linked list already empty!\n");
+        return 0;
+    }
+    if (index > HEAD->length - 1)
+    {
+        printf("Index out of bounds!\n");
         return 0;
     }
     int value;
@@ -116,6 +115,35 @@ void LinkedList_free(Head *HEAD)
     HEAD = NULL;
 }
 
+static int _LinkedList_get_helper(Node *LinkedList, int index)
+{
+    if (!index)
+    {
+        return LinkedList->value;
+    }
+    if (LinkedList->ptr == NULL)
+    {
+        printf("Index out of bounds!\n");
+        return 0;
+    }
+    _LinkedList_get_helper(LinkedList->ptr, index - 1);
+}
+
+int LinkedList_get(Head HEAD, int index)
+{
+    if (HEAD.ptr == NULL)
+    {
+        printf("Linked list empty!\n");
+        return 0;
+    }
+    if (index > HEAD.length - 1)
+    {
+        printf("Index out of bounds!\n");
+        return 0;
+    }
+    return _LinkedList_get_helper(HEAD.ptr, index);
+}
+
 int main(void)
 {
     // Node LinkedList = {11, NULL}; // DO NOT DO THIS, you cannot free it later!
@@ -131,22 +159,31 @@ int main(void)
     {
         LinkedList_append(&HEAD, nums[i]);
     }
-    LinkedList_print(HEAD);                                 // {11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 12, 3, 123, 532, 643, 13}
-    printf("Length: %d\n", HEAD.length);                    // Length: 16
-    printf("%d\n", LinkedList_pop(&HEAD, 0));               // 11
-    LinkedList_print(HEAD);                                 // {12, 1, 2, 3, 4, 5, 6, 7, 8, 12, 3, 123, 532, 643, 13}
-    printf("Length: %d\n", HEAD.length);                    // Length: 15
-    printf("%d\n", LinkedList_pop(&HEAD, 1));               // 1
-    LinkedList_print(HEAD);                                 // {12, 2, 3, 4, 5, 6, 7, 8, 12, 3, 123, 532, 643, 13}
-    printf("Length: %d\n", HEAD.length);                    // Length: 14
-    printf("%d\n", LinkedList_pop(&HEAD, HEAD.length - 1)); // 13
-    LinkedList_print(HEAD);                                 // {12, 2, 3, 4, 5, 6, 7, 8, 12, 3, 123, 532, 643}
-    printf("Length: %d\n", HEAD.length);                    // Length: 13
-    printf("Empty_HEAD:\n");                                // Empty_HEAD:
+    LinkedList_print(HEAD);                                     // {11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 12, 3, 123, 532, 643, 13}
+    printf("Length: %d\n", HEAD.length);                        // Length: 16
+    printf("%d\n", LinkedList_pop(&HEAD, 0));                   // 11
+    LinkedList_print(HEAD);                                     // {12, 1, 2, 3, 4, 5, 6, 7, 8, 12, 3, 123, 532, 643, 13}
+    printf("Length: %d\n", HEAD.length);                        // Length: 15
+    printf("%d\n", LinkedList_pop(&HEAD, 1));                   // 1
+    LinkedList_print(HEAD);                                     // {12, 2, 3, 4, 5, 6, 7, 8, 12, 3, 123, 532, 643, 13}
+    printf("Length: %d\n", HEAD.length);                        // Length: 14
+    printf("%d\n", LinkedList_pop(&HEAD, HEAD.length - 1));     // 13
+    LinkedList_print(HEAD);                                     // {12, 2, 3, 4, 5, 6, 7, 8, 12, 3, 123, 532, 643}
+    printf("Length: %d\n", HEAD.length);                        // Length: 13
+    printf("Get: %d\n", LinkedList_get(HEAD, 0));               // Get: 12
+    printf("Get: %d\n", LinkedList_get(HEAD, 1));               // Get: 2
+    printf("Get: %d\n", LinkedList_get(HEAD, HEAD.length - 1)); // Get: 643
+    printf("Get: %d\n", LinkedList_get(HEAD, HEAD.length));     // Index out of bounds!\nGet: 0
+
+    // ****************** Empty_HEAD ******************
+
+    printf("Empty_HEAD:\n"); // Empty_HEAD:
     Head Empty_HEAD = {NULL, 0};
     // fprintf(stderr, "%p", Empty_HEAD.ptr);
-    LinkedList_print(Empty_HEAD);              // {}
-    printf("Length: %d\n", Empty_HEAD.length); // Length: 0
+    LinkedList_print(Empty_HEAD);                       // {}
+    printf("Length: %d\n", Empty_HEAD.length);          // Length: 0
+    printf("Get: %d\n", LinkedList_get(Empty_HEAD, 1)); // Linked list empty!\nGet: 0
+    printf("Get: %d\n", LinkedList_get(Empty_HEAD, 0)); // Linked list empty!\nGet: 0
     LinkedList_append(&Empty_HEAD, 121);
     LinkedList_print(Empty_HEAD);                   // {121}
     printf("Length: %d\n", Empty_HEAD.length);      // Length: 1
@@ -161,10 +198,15 @@ int main(void)
     printf("%d\n", LinkedList_pop(&Empty_HEAD, Empty_HEAD.length - 1)); // 2
     LinkedList_print(Empty_HEAD);                                       // {1}
     printf("Length: %d\n", Empty_HEAD.length);                          // Length: 1
+    printf("Get: %d\n", LinkedList_get(Empty_HEAD, 1));                 // Index out of bounds!\nGet: 0
     printf("%d\n", LinkedList_pop(&Empty_HEAD, Empty_HEAD.length - 1)); // 1
     LinkedList_print(Empty_HEAD);                                       // {}
     printf("Length: %d\n", Empty_HEAD.length);                          // Length: 0
+    printf("%d\n", LinkedList_pop(&Empty_HEAD, Empty_HEAD.length - 1)); // Linked list empty!\n0
     // fprintf(stderr, "%p\n", Empty_HEAD.ptr);
+
+    // ****************** MemLeak_HEAD ******************
+
     printf("Memory leak test"); // Memory leak test
     Head MemLeak_HEAD = {NULL, 0};
     for (int i = 0; i < 100; i++)

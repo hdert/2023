@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include "LinkedList.h"
 
-void _LinkedList_print_helper(Node *LinkedList)
+static void _LinkedList_print_helper(Node *LinkedList)
 {
     printf(", %d", LinkedList->value);
     if (LinkedList->ptr != NULL)
@@ -27,7 +27,7 @@ void LinkedList_print(Head HEAD)
     printf("}\n");
 }
 
-void _LinkedList_append_helper(Node *LinkedList, int value)
+static void _LinkedList_append_helper(Node *LinkedList, int value)
 {
     if (LinkedList->ptr == NULL)
     {
@@ -52,7 +52,7 @@ void LinkedList_append(Head *HEAD, int value)
     _LinkedList_append_helper(HEAD->ptr, value);
 }
 
-bool _LinkedList_pop_helper(Node **LinkedList, int index, int *value)
+static bool _LinkedList_pop_helper(Node **LinkedList, int index, int *value)
 {
     if (!index)
     {
@@ -84,6 +84,23 @@ int LinkedList_pop(Head *HEAD, int index)
         return value;
     }
     return 0;
+}
+
+static void _LinkedList_free_helper(Node *LinkedList)
+{
+    if (LinkedList->ptr != NULL)
+    {
+        _LinkedList_free_helper(LinkedList->ptr);
+    }
+    free(LinkedList);
+}
+void LinkedList_free(Head *HEAD)
+{
+    if (HEAD->ptr != NULL)
+    {
+        _LinkedList_free_helper(HEAD->ptr);
+    }
+    HEAD = NULL;
 }
 
 int main(void)
@@ -126,10 +143,13 @@ int main(void)
     // fprintf(stderr, "%p\n", Empty_HEAD.ptr);
     printf("Memory leak test");
     Head MemLeak_HEAD = {NULL, 0};
-    for (int i = 0; i < 0; i++)
+    for (int i = 0; i < 100; i++)
     {
         LinkedList_append(&MemLeak_HEAD, 1);
         LinkedList_pop(&MemLeak_HEAD, 0);
     }
+    LinkedList_free(&HEAD);
+    LinkedList_free(&Empty_HEAD);
+    LinkedList_free(&MemLeak_HEAD);
     return 0;
 }

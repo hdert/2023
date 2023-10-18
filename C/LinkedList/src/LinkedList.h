@@ -15,14 +15,10 @@ typedef struct Head
 
 void LinkedList_print(Head Head);
 
-// void _LinkedList_print_helper(Node *LinkedList);
-
 void LinkedList_append(Head *HEAD, int value);
 
 int LinkedList_pop(Head *HEAD, int index);
 
-// int _LinkedList_pop_helper(Node **LinkedList, int index, int value);
-
-// int main(void);
+void LinkedList_free(Head *HEAD);
 
 #endif // LINKEDLIST_H

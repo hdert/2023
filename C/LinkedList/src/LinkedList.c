@@ -3,6 +3,14 @@
 #include <stdbool.h>
 #include "LinkedList.h"
 
+/*
+                        TODO
+Write prepend function - could be same as add function
+Write add function
+Write get at index function
+Write find index function
+*/
+
 static void _LinkedList_print_helper(Node *LinkedList)
 {
     printf(", %d", LinkedList->value);
@@ -140,6 +148,16 @@ int main(void)
     printf("%d\n", LinkedList_pop(&Empty_HEAD, 0));
     LinkedList_print(Empty_HEAD);
     printf("Length: %d\n", Empty_HEAD.length);
+    LinkedList_append(&Empty_HEAD, 1);
+    LinkedList_append(&Empty_HEAD, 2);
+    LinkedList_print(Empty_HEAD);
+    printf("Length: %d\n", Empty_HEAD.length);
+    printf("%d\n", LinkedList_pop(&Empty_HEAD, Empty_HEAD.length - 1));
+    LinkedList_print(Empty_HEAD);
+    printf("Length: %d\n", Empty_HEAD.length);
+    printf("%d\n", LinkedList_pop(&Empty_HEAD, Empty_HEAD.length - 1));
+    LinkedList_print(Empty_HEAD);
+    printf("Length: %d\n", Empty_HEAD.length);
     // fprintf(stderr, "%p\n", Empty_HEAD.ptr);
     printf("Memory leak test");
     Head MemLeak_HEAD = {NULL, 0};
@@ -147,6 +165,10 @@ int main(void)
     {
         LinkedList_append(&MemLeak_HEAD, 1);
         LinkedList_pop(&MemLeak_HEAD, 0);
+    }
+    for (int i = 0; i < 100; i++)
+    {
+        LinkedList_append(&MemLeak_HEAD, 1);
     }
     LinkedList_free(&HEAD);
     LinkedList_free(&Empty_HEAD);

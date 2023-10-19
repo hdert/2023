@@ -1,1 +1,0 @@
-add_library(LinkedList src/LinkedList.c)

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include "LinkedList/src/LinkedList.h"
+#include "LinkedList.h"
 #include "Stack.h"
 
 void Stack_print(Stack STACK)

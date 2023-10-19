@@ -68,6 +68,7 @@ void get_input_validate(char *buffer, int bufferSize)
                 // We don't enforce that isOperator is true as
                 // We could be at the start of the equation.
                 paren_counter++;
+                continue;
             }
             if (buffer[i] == RIGHT_PAREN)
             {
@@ -87,6 +88,7 @@ void get_input_validate(char *buffer, int bufferSize)
                     successful == false;
                     break;
                 }
+                continue;
             }
             if (buffer[i] == '\n' || buffer[i] == '\r')
             {

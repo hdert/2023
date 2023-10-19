@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include "/home/hdert/Documents/repos/2023/C/LinkedList/src/LinkedList.h"
+#include "LinkedList/src/LinkedList.h"
 #include "Stack.h"
 
 int main(void)

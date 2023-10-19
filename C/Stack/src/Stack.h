@@ -1,6 +1,6 @@
 #ifndef STACK_H
 #define STACK_H
-#include "../../LinkedList/src/LinkedList.h"
+#include "LinkedList/src/LinkedList.h"
 
 typedef struct Stack
 {

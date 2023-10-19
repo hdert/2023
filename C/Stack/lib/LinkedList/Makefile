@@ -6,7 +6,7 @@ SHELL = /bin/sh
 BUILD = .build
 EXE = Tests
 SRC = src
-LIBRARIES = lib/LinkedList/src/LinkedList.c
+LIBRARIES = 
 LIB = lib
 
 $(BUILD)/$(EXE).o: $(SRC)/*.c

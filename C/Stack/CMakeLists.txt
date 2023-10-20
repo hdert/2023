@@ -10,9 +10,21 @@ add_subdirectory(../LinkedList LinkedList)
 
 target_link_libraries(Stack PUBLIC LinkedList)
 
-target_link_libraries(Stack PUBLIC Munit)
-
 target_include_directories(Stack PUBLIC
                           "${PROJECT_SOURCE_DIR}/../LinkedList/src"
                           "${PROJECT_SOURCE_DIR}/../munit/"
                           )
+
+add_executable(StackTest src/Tests.c)
+
+target_link_libraries(StackTest PUBLIC Stack)
+target_link_libraries(StackTest PUBLIC LinkedList)
+target_link_libraries(StackTest PUBLIC LinkedListTestHelpers)
+target_link_libraries(StackTest PUBLIC Munit)
+
+target_include_directories(StackTest PUBLIC
+                          "${PROJECT_SOURCE_DIR}/../LinkedList/src"
+                          "${PROJECT_SOURCE_DIR}/../munit/"
+                          )
+
+add_test(NAME TestInstantiator COMMAND StackTest)

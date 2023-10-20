@@ -56,9 +56,9 @@ static void _LinkedList_add_helper(Node **LinkedList, int value, int index)
 {
     if (index == 0)
     {
-        Node *temp = *LinkedList;
+        Node *current_node = *LinkedList;
         *LinkedList = (Node *)malloc(sizeof(Node));
-        (*LinkedList)->ptr = temp;
+        (*LinkedList)->ptr = current_node;
         (*LinkedList)->value = value;
         return;
     }
@@ -91,12 +91,12 @@ void LinkedList_add(Head *HEAD, int value, int index)
 
 static bool _LinkedList_pop_helper(Node **LinkedList, int index, int *value)
 {
-    if (!index)
+    if (index == 0)
     {
-        Node *temp = *LinkedList;
+        Node *current_node = *LinkedList;
         *value = (*LinkedList)->value;
         *LinkedList = (*LinkedList)->ptr;
-        free(temp);
+        free(current_node);
         return true;
     }
     if (!(*LinkedList)->ptr)

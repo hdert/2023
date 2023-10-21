@@ -1,5 +1,5 @@
-#ifndef CALCULATOR_H
-#define CALCULATOR_H
+#ifndef CALCULATORLIB_H
+#define CALCULATORLIB_H
 
 typedef enum
 {
@@ -15,4 +15,10 @@ typedef enum
     RIGHT_PAREN = ')',
 } operators;
 
-#endif // CALCULATOR_H
+double check_valid_operator(char operator);
+
+bool validate_input(char *buffer, int bufferSize);
+
+void get_input_validate(char *buffer, int bufferSize);
+
+#endif // CALCULATORLIB_H

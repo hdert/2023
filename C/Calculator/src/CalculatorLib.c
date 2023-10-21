@@ -59,6 +59,7 @@ bool validate_input(char *buffer, int bufferSize)
         {
             // We don't enforce that isOperator is true as
             // We could be at the start of the equation.
+            isOperator = true;
             paren_counter++;
             continue;
         }

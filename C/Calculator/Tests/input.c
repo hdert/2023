@@ -6,43 +6,81 @@
 
 int test_check_valid_operator()
 {
-    assert_true(check_valid_operator('+'));
-    assert_true(check_valid_operator('-'));
-    assert_true(check_valid_operator('/'));
-    assert_true(check_valid_operator('*'));
-    assert_true(check_valid_operator('^'));
-    assert_true(check_valid_operator('%'));
-    assert_true(check_valid_operator('('));
-    assert_true(check_valid_operator(')'));
-    assert_false(check_valid_operator('a'));
-    assert_false(check_valid_operator('1'));
-    assert_false(check_valid_operator('0'));
-    assert_false(check_valid_operator('w'));
-    assert_false(check_valid_operator('9'));
-    assert_false(check_valid_operator('&'));
+    char success_cases[] = {
+        '+',
+        '-',
+        '/',
+        '*',
+        '^',
+        '%',
+        '(',
+        ')',
+        '\000'};
+    char fail_cases[] = {
+        'a',
+        '1',
+        '0',
+        'w',
+        '9',
+        '&',
+        '\000'};
+    for (int i = 0; success_cases[i] != '\000'; i++)
+    {
+        assert_true(check_valid_operator(success_cases[i]));
+    }
+    for (int i = 0; fail_cases[i] != NULL; i++)
+    {
+        assert_false(check_valid_operator(fail_cases[i]));
+    }
     return 0;
 }
 
-static MunitResult assert_validate_input(char *input)
+static bool assert_validate_input(char *input, bool expectation)
 {
     char buffer[100];
     memset(buffer, 0, sizeof buffer);
     strcpy(buffer, input);
     strcat(buffer, "\n");
-    assert_true(validate_input(buffer, sizeof buffer));
+    if (expectation)
+    {
+        assert_true(validate_input(buffer, sizeof buffer));
+    }
+    else
+    {
+        assert_false(validate_input(buffer, sizeof buffer));
+    }
     return MUNIT_OK;
 }
 
 int test_validate_input()
 {
-    const char *cases[] = {
+    char *success_cases[] = {
         "10+10",
         "10 + 10",
         "    10+10 (20)",
+        "10/10",
+        "10 / (10)",
+        "10(10)",
+        "10*(10)",
+        "10 * ( 10 ) ",
+        "10",
         NULL};
-    for (int i = 0; cases[i] != NULL; i++)
+    char *fail_cases[] = {
+        "10++10",
+        "10(*10)",
+        "10(10*)",
+        "10*",
+        "10(10)*",
+        "()",
+        "10()",
+        NULL};
+    for (int i = 0; success_cases[i] != NULL; i++)
     {
-        assert_validate_input(cases[i]);
+        assert_validate_input(success_cases[i], true);
+    }
+    for (int i = 0; fail_cases[i] != NULL; i++)
+    {
+        assert_validate_input(fail_cases[i], false);
     }
     return 0;
 }

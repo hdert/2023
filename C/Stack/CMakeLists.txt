@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.27)
-
 project(Stack LANGUAGES C)
+include(CTest)
+
 
 add_library(Stack src/Stack.c)
 
@@ -27,4 +28,4 @@ target_include_directories(StackTest PUBLIC
                           "${PROJECT_SOURCE_DIR}/../munit/"
                           )
 
-add_test(NAME TestInstantiator COMMAND StackTest)
+add_test(StackTest StackTest)

@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.27)
-
 project(LinkedList LANGUAGES C)
+include(CTest)
+
 
 add_library(LinkedList src/LinkedList.c)
 
@@ -22,4 +23,4 @@ target_include_directories(LinkedListTest PRIVATE
                           "${PROJECT_SOURCE_DIR}/../munit/"
                           )
 
-add_test(NAME TestInstantiator COMMAND LinkedListTest)
+add_test(LinkedListTest LinkedListTest)

@@ -224,53 +224,66 @@ void infix_to_postfix(char *input, int inputSize, char *output, int outputSize)
     Stack_free(&STACK);
 }
 
-double evaluate(char operator, double value_1, double value_2)
+bool evaluate(char operator, double value_1, double value_2, double *result)
 {
     switch (operator)
     {
     case ADDITION:
-        return value_1 + value_2;
+        *result = value_1 + value_2;
+        return true;
     case SUBTRACTION:
-        return value_1 - value_2;
+        *result = value_1 - value_2;
+        return true;
     case DIVISION:
         if (value_2 == 0)
         {
             printf("Cannot divide by 0\n");
-            return 1;
+            return false;
         }
-        return value_1 / value_2;
+        *result = value_1 / value_2;
+        return true;
         break;
     case MULTIPLICATION:
-        return value_1 * value_2;
+        *result = value_1 * value_2;
+        return true;
         break;
     case EXPONENTIATION:
-        return pow(value_1, value_2);
+        *result = pow(value_1, value_2);
+        return true;
         break;
     case MODULUS:
         if (value_2 == 0)
         {
             printf("Cannot divide by 0\n");
-            return 1;
+            return false;
         }
-        return fmod(value_1, value_2);
+        *result = fmod(value_1, value_2);
+        return true;
         break;
     default:
         printf("That wasn't a valid operator\n");
-        return 0;
+        return false;
     }
 }
 
-double evaluate_postfix(char *expression, int expressionSize)
+bool evaluate_postfix(char *expression, int expressionSize, double *result)
 {
     Stack STACK = {NULL, 0};
-    char *token = strtok(expression, " ");
+    char *token = strtok(expression, " "); // TODO: An array would be better here
     double value;
     while (token != NULL)
     {
         if (check_valid_operator(*token, true))
         {
             value = Stack_pop(&STACK);
-            Stack_push(&STACK, evaluate(*token, Stack_pop(&STACK), value));
+            if (!evaluate(*token, Stack_pop(&STACK), value, &value))
+            {
+                // The condition works because evaluate computes
+                // value_1 + value_2 before assigning the
+                // result to value, so no weirdness occurs.
+                return false;
+            }
+            Stack_push(&STACK, value);
         }
         else
         {
@@ -279,7 +292,7 @@ double evaluate_postfix(char *expression, int expressionSize)
         }
         token = strtok(NULL, " ");
     }
-    value = Stack_pop(&STACK);
+    *result = Stack_pop(&STACK);
     Stack_free(&STACK);
-    return value;
+    return true;
 }

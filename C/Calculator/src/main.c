@@ -18,7 +18,10 @@ int main(void)
 
         infix_to_postfix(input, sizeof input, output, sizeof output);
 
-        result = evaluate_postfix(output, sizeof output);
+        if (!evaluate_postfix(output, sizeof output, &result))
+        {
+            continue;
+        }
 
         printf("The result is %.6lf\n", result);
     }

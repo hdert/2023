@@ -25,8 +25,8 @@ void infix_to_postfix(char *input, int inputSize, char *output, int outputSize);
 
 int operator_precedence(char operator);
 
-double evaluate(char operator, double value_1, double value_2);
+bool evaluate(char operator, double value_1, double value_2, double *result);
 
-double evaluate_postfix(char *expression, int expressionSize);
+bool evaluate_postfix(char *expression, int expressionSize, double *result);
 
 #endif // CALCULATORLIB_H

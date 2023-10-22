@@ -3,7 +3,7 @@
 
 typedef struct Node
 {
-    int value;
+    double value;
     struct Node *ptr;
 } Node;
 
@@ -15,16 +15,16 @@ typedef struct Head
 
 void LinkedList_print(Head Head);
 
-void LinkedList_add(Head *HEAD, int value, int index);
+void LinkedList_add(Head *HEAD, double value, int index);
 
-void LinkedList_append(Head *HEAD, int value);
+void LinkedList_append(Head *HEAD, double value);
 
-int LinkedList_pop(Head *HEAD, int index);
+double LinkedList_pop(Head *HEAD, int index);
 
 void LinkedList_free(Head *HEAD);
 
-int LinkedList_get(Head HEAD, int index);
+double LinkedList_get(Head HEAD, int index);
 
-bool LinkedList_find(Head HEAD, int key, int *index);
+bool LinkedList_find(Head HEAD, double key, int *index);
 
 #endif // LINKEDLIST_H

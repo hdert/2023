@@ -5,7 +5,7 @@
 
 static void _LinkedList_print_helper(Node *LinkedList)
 {
-    printf(", %d", LinkedList->value);
+    printf(", %lf", LinkedList->value);
     if (LinkedList->ptr != NULL)
     {
         _LinkedList_print_helper(LinkedList->ptr);
@@ -19,7 +19,7 @@ void LinkedList_print(Head HEAD)
         printf("{}\n");
         return;
     }
-    printf("{%d", HEAD.ptr->value);
+    printf("{%lf", HEAD.ptr->value);
     if (HEAD.ptr->ptr != NULL)
     {
         _LinkedList_print_helper(HEAD.ptr->ptr);
@@ -27,7 +27,7 @@ void LinkedList_print(Head HEAD)
     printf("}\n");
 }
 
-static void _LinkedList_append_helper(Node *LinkedList, int value)
+static void _LinkedList_append_helper(Node *LinkedList, double value)
 {
     if (LinkedList->ptr == NULL)
     {
@@ -39,7 +39,7 @@ static void _LinkedList_append_helper(Node *LinkedList, int value)
     _LinkedList_append_helper(LinkedList->ptr, value);
 }
 
-void LinkedList_append(Head *HEAD, int value)
+void LinkedList_append(Head *HEAD, double value)
 {
     HEAD->length++;
     if (HEAD->ptr == NULL)
@@ -52,7 +52,7 @@ void LinkedList_append(Head *HEAD, int value)
     _LinkedList_append_helper(HEAD->ptr, value);
 }
 
-static void _LinkedList_add_helper(Node **LinkedList, int value, int index)
+static void _LinkedList_add_helper(Node **LinkedList, double value, int index)
 {
     if (index == 0)
     {
@@ -70,7 +70,7 @@ static void _LinkedList_add_helper(Node **LinkedList, int value, int index)
     _LinkedList_add_helper(&(*LinkedList)->ptr, value, index - 1);
 }
 
-void LinkedList_add(Head *HEAD, int value, int index)
+void LinkedList_add(Head *HEAD, double value, int index)
 {
     if (index > HEAD->length)
     {
@@ -89,7 +89,7 @@ void LinkedList_add(Head *HEAD, int value, int index)
     HEAD->length++;
 }
 
-static bool _LinkedList_pop_helper(Node **LinkedList, int index, int *value)
+static bool _LinkedList_pop_helper(Node **LinkedList, int index, double *value)
 {
     if (index == 0)
     {
@@ -107,7 +107,7 @@ static bool _LinkedList_pop_helper(Node **LinkedList, int index, int *value)
     return _LinkedList_pop_helper(&((*LinkedList)->ptr), index - 1, value);
 }
 
-int LinkedList_pop(Head *HEAD, int index)
+double LinkedList_pop(Head *HEAD, int index)
 {
     if (HEAD->ptr == NULL)
     {
@@ -119,7 +119,7 @@ int LinkedList_pop(Head *HEAD, int index)
         printf("Index out of bounds!\n");
         return 0;
     }
-    int value;
+    double value;
     if (_LinkedList_pop_helper(&(HEAD->ptr), index, &value))
     {
         HEAD->length--;
@@ -146,7 +146,7 @@ void LinkedList_free(Head *HEAD)
     HEAD->length = 0;
 }
 
-static int _LinkedList_get_helper(Node *LinkedList, int index)
+static double _LinkedList_get_helper(Node *LinkedList, int index)
 {
     if (!index)
     {
@@ -160,7 +160,7 @@ static int _LinkedList_get_helper(Node *LinkedList, int index)
     return _LinkedList_get_helper(LinkedList->ptr, index - 1);
 }
 
-int LinkedList_get(Head HEAD, int index)
+double LinkedList_get(Head HEAD, int index)
 {
     if (HEAD.ptr == NULL)
     {
@@ -175,9 +175,9 @@ int LinkedList_get(Head HEAD, int index)
     return _LinkedList_get_helper(HEAD.ptr, index);
 }
 
-static bool _LinkedList_find_helper(Node *LinkedList, int key, int *index)
+static bool _LinkedList_find_helper(Node *LinkedList, double key, int *index)
 {
-    if (LinkedList->value == key)
+    if (LinkedList->value == key) // TODO: This is going to be messy with doubles
     {
         return true;
     }
@@ -189,7 +189,7 @@ static bool _LinkedList_find_helper(Node *LinkedList, int key, int *index)
     return _LinkedList_find_helper(LinkedList->ptr, key, index);
 }
 
-bool LinkedList_find(Head HEAD, int key, int *index)
+bool LinkedList_find(Head HEAD, double key, int *index)
 {
     *index = 0;
     if (HEAD.ptr == NULL)

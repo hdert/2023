@@ -10,7 +10,7 @@ void Stack_print(Stack STACK)
     LinkedList_print(HEAD);
 }
 
-void Stack_add(Stack *STACK, int value)
+void Stack_push(Stack *STACK, double value)
 {
     Head HEAD = {STACK->ptr, STACK->length};
     LinkedList_add(&HEAD, value, 0);
@@ -18,7 +18,7 @@ void Stack_add(Stack *STACK, int value)
     STACK->length = HEAD.length;
 }
 
-int Stack_pop(Stack *STACK)
+double Stack_pop(Stack *STACK)
 {
     Head HEAD = {STACK->ptr, STACK->length};
     int result = LinkedList_pop(&HEAD, 0);
@@ -34,36 +34,8 @@ void Stack_free(Stack *STACK)
     STACK->ptr = HEAD.ptr;
     STACK->length = HEAD.length;
 }
-int Stack_peek(Stack STACK)
+double Stack_peek(Stack STACK)
 {
     Head HEAD = {STACK.ptr, STACK.length};
     return LinkedList_get(HEAD, 0);
 }
-
-// static int main(void)
-// {
-//     Stack STACK = {NULL, 0};
-//     Stack_print(STACK);                   // {}
-//     printf("Length: %d\n", STACK.length); // Length: 0
-//     Stack_add(&STACK, 21);
-//     Stack_print(STACK);                   // {21}
-//     printf("Length: %d\n", STACK.length); // Length: 1
-//     Stack_add(&STACK, 19);
-//     Stack_print(STACK);                   // {19, 21}
-//     printf("Length: %d\n", STACK.length); // Length: 2
-//     printf("%d", Stack_peek(STACK));      // 19
-//     printf("%d", Stack_pop(&STACK));      // 19
-//     Stack_print(STACK);                   // {21}
-//     printf("Length: %d\n", STACK.length); // Length: 1
-//     printf("%d", Stack_pop(&STACK));      // 21
-//     Stack_print(STACK);                   // {}
-//     printf("Length: %d\n", STACK.length); // Length: 0
-//     Stack_add(&STACK, 21);
-//     Stack_add(&STACK, 22);
-//     Stack_print(STACK);                   // {22, 21}
-//     printf("Length: %d\n", STACK.length); // Length: 2
-//     Stack_free(&STACK);
-//     Stack_print(STACK);                   // {}
-//     printf("Length: %d\n", STACK.length); // Length: 0
-//     return 0;
-// }

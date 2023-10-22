@@ -10,11 +10,11 @@ typedef struct Stack
 
 void Stack_print(Stack STACK);
 
-void Stack_add(Stack *STACK, int value);
+void Stack_push(Stack *STACK, double value);
 
-int Stack_pop(Stack *STACK);
+double Stack_pop(Stack *STACK);
 
-int Stack_peek(Stack STACK);
+double Stack_peek(Stack STACK);
 
 void Stack_free(Stack *STACK);
 

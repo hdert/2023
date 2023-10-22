@@ -9,7 +9,7 @@
 
 static void _LinkedListTest_print_helper(Node *LinkedList, char **running_result)
 {
-    *running_result += sprintf(*running_result, ", %d", LinkedList->value);
+    *running_result += sprintf(*running_result, ", %.0lf", LinkedList->value);
     if (LinkedList->ptr != NULL)
     {
         _LinkedListTest_print_helper(LinkedList->ptr, running_result);
@@ -27,7 +27,7 @@ void LinkedListTest_print(Head HEAD, char *result, unsigned long resultSize)
         running_result += sprintf(running_result, "{}");
         return;
     }
-    running_result += sprintf(running_result, "{%d", HEAD.ptr->value);
+    running_result += sprintf(running_result, "{%.0lf", HEAD.ptr->value);
     if (HEAD.ptr->ptr != NULL)
     {
         _LinkedListTest_print_helper(HEAD.ptr->ptr, &running_result);

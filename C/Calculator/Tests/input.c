@@ -1,4 +1,5 @@
 #define MUNIT_ENABLE_ASSERT_ALIASES
+#include <math.h>
 #include <stdbool.h>
 #include <string.h>
 #include "munit.h"
@@ -26,11 +27,11 @@ int test_check_valid_operator()
         '\000'};
     for (int i = 0; success_cases[i] != '\000'; i++)
     {
-        assert_true(check_valid_operator(success_cases[i]));
+        assert_true(check_valid_operator(success_cases[i], false));
     }
-    for (int i = 0; fail_cases[i] != NULL; i++)
+    for (int i = 0; fail_cases[i] != '\000'; i++)
     {
-        assert_false(check_valid_operator(fail_cases[i]));
+        assert_false(check_valid_operator(fail_cases[i], false));
     }
     return 0;
 }
@@ -73,6 +74,7 @@ int test_validate_input()
         "10(10)*",
         "()",
         "10()",
+        "21 + 2 ) * ( 5 / 6",
         NULL};
     for (int i = 0; success_cases[i] != NULL; i++)
     {

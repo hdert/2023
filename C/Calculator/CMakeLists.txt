@@ -10,6 +10,7 @@ add_library(CalculatorLib src/CalculatorLib.c)
 add_subdirectory(../Stack Stack)
 
 target_link_libraries(Calculator PUBLIC CalculatorLib)
+target_link_libraries(Calculator PUBLIC m)
 
 target_link_libraries(CalculatorLib PUBLIC Stack)
 

@@ -21,7 +21,7 @@ void Stack_push(Stack *STACK, double value)
 double Stack_pop(Stack *STACK)
 {
     Head HEAD = {STACK->ptr, STACK->length};
-    int result = LinkedList_pop(&HEAD, 0);
+    double result = LinkedList_pop(&HEAD, 0);
     STACK->ptr = HEAD.ptr;
     STACK->length = HEAD.length;
     return result;

@@ -10,7 +10,7 @@
 static void LinkedListTest_print_helper(Node *LinkedList, char **running_result, unsigned long *resultSize)
 {
     int offset;
-    offset = snprintf(*running_result, resultSize, ", %.0lf", LinkedList->value);
+    offset = snprintf(*running_result, *resultSize, ", %.0lf", LinkedList->value);
     *running_result += offset;
     *resultSize -= offset;
     if (LinkedList->ptr != NULL)

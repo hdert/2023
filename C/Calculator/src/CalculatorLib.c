@@ -148,6 +148,7 @@ int operator_precedence(char operator_char)
 
 bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsigned long outputSize)
 {
+    memset(output, 0, outputSize);
     Stack STACK = {NULL, 0};
     unsigned long outputCounter = 0;
     for (unsigned long i = 0; i < inputSize && outputCounter < outputSize; i++)
@@ -170,6 +171,7 @@ bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsign
         {
             if (!Stack_push(&STACK, LEFT_PAREN))
             {
+                Stack_free(&STACK);
                 return false;
             }
             continue;
@@ -198,6 +200,7 @@ bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsign
         outputCounter++;
         if (!Stack_push(&STACK, input[i]))
         {
+            Stack_free(&STACK);
             return false;
         }
     }
@@ -210,13 +213,14 @@ bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsign
         outputCounter++;
         // strcat(output, (char)Stack_pop(&STACK));
     }
-    Stack_free(&STACK);
+    Stack_free(&STACK); // This always should run (Check early returns)
 
     if (outputCounter >= outputSize)
     {
         printf("Error (infix_to_postfix): insufficient output buffer size.\n");
         return false;
     }
+    return true;
 }
 
 bool evaluate(char operator_char, double value_1, double value_2, double *result)
@@ -272,10 +276,12 @@ bool evaluate_postfix(char *expression, double *result)
                 // The condition works because evaluate computes
                 // value_1 + value_2 before assigning the
                 // result to value, so no weirdness occurs.
+                Stack_free(&STACK);
                 return false;
             }
             if (!Stack_push(&STACK, value))
             {
+                Stack_free(&STACK);
                 return false;
             }
         }
@@ -284,12 +290,13 @@ bool evaluate_postfix(char *expression, double *result)
             sscanf(token, "%lf", &value);
             if (!Stack_push(&STACK, value))
             {
+                Stack_free(&STACK);
                 return false;
             }
         }
         token = strtok(NULL, " ");
     }
     *result = Stack_pop(&STACK);
-    Stack_free(&STACK);
+    Stack_free(&STACK); // This should always run (Check early returns)
     return true;
 }

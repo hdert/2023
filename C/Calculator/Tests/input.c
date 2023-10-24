@@ -5,7 +5,7 @@
 #include "munit.h"
 #include "CalculatorLib.h"
 
-int test_check_valid_operator()
+static int test_check_valid_operator(void)
 {
     char success_cases[] = {
         '+',
@@ -53,7 +53,7 @@ static bool assert_validate_input(char *input, bool expectation)
     return MUNIT_OK;
 }
 
-int test_validate_input()
+static int test_validate_input(void)
 {
     char *success_cases[] = {
         "10+10",

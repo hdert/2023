@@ -1,6 +1,6 @@
 #ifndef STACK_H
 #define STACK_H
-#include "LinkedList.h"
+#include <stdbool.h>
 
 typedef struct Stack
 {
@@ -10,7 +10,7 @@ typedef struct Stack
 
 void Stack_print(Stack STACK);
 
-void Stack_push(Stack *STACK, double value);
+bool Stack_push(Stack *STACK, double value);
 
 double Stack_pop(Stack *STACK);
 

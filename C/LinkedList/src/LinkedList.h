@@ -1,5 +1,6 @@
 #ifndef LINKEDLIST_H
 #define LINKEDLIST_H
+#include <stdbool.h>
 
 typedef struct Node
 {
@@ -15,9 +16,9 @@ typedef struct Head
 
 void LinkedList_print(Head Head);
 
-void LinkedList_add(Head *HEAD, double value, int index);
+bool LinkedList_add(Head *HEAD, double value, int index);
 
-void LinkedList_append(Head *HEAD, double value);
+bool LinkedList_append(Head *HEAD, double value);
 
 double LinkedList_pop(Head *HEAD, int index);
 

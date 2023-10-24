@@ -6,7 +6,7 @@
 #include "munit.h"
 #include "CalculatorLib.h"
 
-int test_evaluate()
+static int test_evaluate(void)
 {
     char success_cases[] = {
         '+',
@@ -69,7 +69,7 @@ int test_evaluate()
     }
     return 0;
 }
-int test_evaluate_postfix()
+static int test_evaluate_postfix(void)
 {
     char *success_cases[] = {
         // Doesn't work because strings aren't modifiable
@@ -97,14 +97,14 @@ int test_evaluate_postfix()
     for (int i = 0; success_cases[i] != NULL; i++)
     {
         strcpy(string, success_cases[i]);
-        assert_true(evaluate_postfix(string, sizeof success_cases[i], &result));
+        assert_true(evaluate_postfix(string, &result));
         assert_int(result, ==, success_results[i]);
     }
     result = 0;
     for (int i = 0; fail_cases[i] != NULL; i++)
     {
         strcpy(string, fail_cases[i]);
-        assert_false(evaluate_postfix(string, sizeof fail_cases[i], &result));
+        assert_false(evaluate_postfix(string, &result));
         assert_int(result, ==, 0);
     }
     return 0;

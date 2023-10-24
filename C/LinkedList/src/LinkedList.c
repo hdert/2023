@@ -3,12 +3,12 @@
 #include <stdbool.h>
 #include "LinkedList.h"
 
-static void _LinkedList_print_helper(Node *LinkedList)
+static void LinkedList_print_helper(Node *LinkedList)
 {
     printf(", %lf", LinkedList->value);
     if (LinkedList->ptr != NULL)
     {
-        _LinkedList_print_helper(LinkedList->ptr);
+        LinkedList_print_helper(LinkedList->ptr);
     }
 }
 
@@ -22,74 +22,85 @@ void LinkedList_print(Head HEAD)
     printf("{%lf", HEAD.ptr->value);
     if (HEAD.ptr->ptr != NULL)
     {
-        _LinkedList_print_helper(HEAD.ptr->ptr);
+        LinkedList_print_helper(HEAD.ptr->ptr);
     }
     printf("}\n");
 }
 
-static void _LinkedList_append_helper(Node *LinkedList, double value)
+static bool LinkedList_append_helper(Node *LinkedList, double value)
 {
     if (LinkedList->ptr == NULL)
     {
-        LinkedList->ptr = malloc(sizeof(Node));
+        LinkedList->ptr = (Node *)malloc(sizeof(Node));
+        if (LinkedList->ptr == NULL)
+        {
+            return false;
+        }
         LinkedList->ptr->ptr = NULL;
         LinkedList->ptr->value = value;
-        return;
+        return true;
     }
-    _LinkedList_append_helper(LinkedList->ptr, value);
+    return LinkedList_append_helper(LinkedList->ptr, value);
 }
 
-void LinkedList_append(Head *HEAD, double value)
+bool LinkedList_append(Head *HEAD, double value)
 {
     HEAD->length++;
     if (HEAD->ptr == NULL)
     {
         HEAD->ptr = (Node *)malloc(sizeof(Node));
+        if (HEAD->ptr == NULL)
+        {
+            return false;
+        }
         HEAD->ptr->ptr = NULL;
         HEAD->ptr->value = value;
-        return;
+        return true;
     }
-    _LinkedList_append_helper(HEAD->ptr, value);
+    return LinkedList_append_helper(HEAD->ptr, value);
 }
 
-static void _LinkedList_add_helper(Node **LinkedList, double value, int index)
+static bool LinkedList_add_helper(Node **LinkedList, double value, int index)
 {
     if (index == 0)
     {
         Node *current_node = *LinkedList;
         *LinkedList = (Node *)malloc(sizeof(Node));
+        if (*LinkedList == NULL)
+        {
+            return false;
+        }
         (*LinkedList)->ptr = current_node;
         (*LinkedList)->value = value;
-        return;
+        return true;
     }
     if ((*LinkedList)->ptr == NULL)
     {
         printf("Index out of bounds!\n");
-        return;
+        return false;
     }
-    _LinkedList_add_helper(&(*LinkedList)->ptr, value, index - 1);
+    return LinkedList_add_helper(&(*LinkedList)->ptr, value, index - 1);
 }
 
-void LinkedList_add(Head *HEAD, double value, int index)
+bool LinkedList_add(Head *HEAD, double value, int index)
 {
     if (index > HEAD->length)
     {
         printf("Index out of bounds!\n");
-        return;
+        return false;
     }
     if (index == HEAD->length)
     {
-        LinkedList_append(HEAD, value);
-        return;
+        return LinkedList_append(HEAD, value);
     }
     else
     {
-        _LinkedList_add_helper(&(HEAD->ptr), value, index);
+        HEAD->length++;
+        return LinkedList_add_helper(&(HEAD->ptr), value, index);
     }
-    HEAD->length++;
 }
 
-static bool _LinkedList_pop_helper(Node **LinkedList, int index, double *value)
+static bool LinkedList_pop_helper(Node **LinkedList, int index, double *value)
 {
     if (index == 0)
     {
@@ -104,7 +115,7 @@ static bool _LinkedList_pop_helper(Node **LinkedList, int index, double *value)
         printf("Index out of bounds!\n");
         return false;
     }
-    return _LinkedList_pop_helper(&((*LinkedList)->ptr), index - 1, value);
+    return LinkedList_pop_helper(&((*LinkedList)->ptr), index - 1, value);
 }
 
 double LinkedList_pop(Head *HEAD, int index)
@@ -120,7 +131,7 @@ double LinkedList_pop(Head *HEAD, int index)
         return 0;
     }
     double value;
-    if (_LinkedList_pop_helper(&(HEAD->ptr), index, &value))
+    if (LinkedList_pop_helper(&(HEAD->ptr), index, &value))
     {
         HEAD->length--;
         return value;
@@ -128,11 +139,11 @@ double LinkedList_pop(Head *HEAD, int index)
     return 0;
 }
 
-static void _LinkedList_free_helper(Node *LinkedList)
+static void LinkedList_free_helper(Node *LinkedList)
 {
     if (LinkedList->ptr != NULL)
     {
-        _LinkedList_free_helper(LinkedList->ptr);
+        LinkedList_free_helper(LinkedList->ptr);
     }
     free(LinkedList);
 }
@@ -140,13 +151,13 @@ void LinkedList_free(Head *HEAD)
 {
     if (HEAD->ptr != NULL)
     {
-        _LinkedList_free_helper(HEAD->ptr);
+        LinkedList_free_helper(HEAD->ptr);
     }
     HEAD->ptr = NULL;
     HEAD->length = 0;
 }
 
-static double _LinkedList_get_helper(Node *LinkedList, int index)
+static double LinkedList_get_helper(Node *LinkedList, int index)
 {
     if (!index)
     {
@@ -157,7 +168,7 @@ static double _LinkedList_get_helper(Node *LinkedList, int index)
         printf("Index out of bounds!\n");
         return 0;
     }
-    return _LinkedList_get_helper(LinkedList->ptr, index - 1);
+    return LinkedList_get_helper(LinkedList->ptr, index - 1);
 }
 
 double LinkedList_get(Head HEAD, int index)
@@ -172,10 +183,10 @@ double LinkedList_get(Head HEAD, int index)
         printf("Index out of bounds!\n");
         return 0;
     }
-    return _LinkedList_get_helper(HEAD.ptr, index);
+    return LinkedList_get_helper(HEAD.ptr, index);
 }
 
-static bool _LinkedList_find_helper(Node *LinkedList, double key, int *index)
+static bool LinkedList_find_helper(Node *LinkedList, double key, int *index)
 {
     if (LinkedList->value == key) // TODO: This is going to be messy with doubles
     {
@@ -186,7 +197,7 @@ static bool _LinkedList_find_helper(Node *LinkedList, double key, int *index)
         return false;
     }
     (*index)++;
-    return _LinkedList_find_helper(LinkedList->ptr, key, index);
+    return LinkedList_find_helper(LinkedList->ptr, key, index);
 }
 
 bool LinkedList_find(Head HEAD, double key, int *index)
@@ -197,5 +208,5 @@ bool LinkedList_find(Head HEAD, double key, int *index)
         printf("Linked list empty!\n");
         return false;
     }
-    return _LinkedList_find_helper(HEAD.ptr, key, index);
+    return LinkedList_find_helper(HEAD.ptr, key, index);
 }

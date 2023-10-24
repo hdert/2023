@@ -6,7 +6,7 @@
 #include "munit.h"
 #include "CalculatorLib.h"
 
-int test_infix_to_postfix()
+static int test_infix_to_postfix(void)
 {
     char *success_cases[] = {
         "10+10",
@@ -37,16 +37,13 @@ int test_infix_to_postfix()
     for (int i = 0; success_cases[i] != NULL; i += 2)
     {
         memset(output, 0, sizeof output);
-        infix_to_postfix(success_cases[i], strlen(success_cases[i]), output, sizeof output);
-        // fprintf(stdout, "Input: %s\n", success_cases[i]);
-        // fprintf(stdout, "Expected: %s\n", success_cases[i + 1]);
-        // fprintf(stdout, "Result: %s\n", output);
+        assert_true(infix_to_postfix(success_cases[i], strlen(success_cases[i]), output, sizeof output));
         assert_string_equal(output, success_cases[i + 1]);
     }
     return 0;
 }
 
-int test_operator_precedence()
+static int test_operator_precedence(void)
 {
     assert_int(operator_precedence('+'), ==, 2);
     assert_int(operator_precedence('-'), ==, 2);
@@ -57,6 +54,7 @@ int test_operator_precedence()
     assert_int(operator_precedence('('), ==, 1);
     assert_int(operator_precedence(')'), ==, 5);
     assert_int(operator_precedence('a'), ==, 0);
+    return 0;
 }
 
 int main(void)

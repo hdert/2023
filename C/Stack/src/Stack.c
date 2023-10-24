@@ -10,12 +10,16 @@ void Stack_print(Stack STACK)
     LinkedList_print(HEAD);
 }
 
-void Stack_push(Stack *STACK, double value)
+bool Stack_push(Stack *STACK, double value)
 {
     Head HEAD = {STACK->ptr, STACK->length};
-    LinkedList_add(&HEAD, value, 0);
+    if (!LinkedList_add(&HEAD, value, 0))
+    {
+        return false;
+    }
     STACK->ptr = HEAD.ptr;
     STACK->length = HEAD.length;
+    return true;
 }
 
 double Stack_pop(Stack *STACK)

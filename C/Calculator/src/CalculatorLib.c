@@ -6,47 +6,41 @@
 #include "Stack.h"
 #include "CalculatorLib.h"
 
-double check_valid_operator(char operator, bool quiet)
+bool check_valid_operator(char operator_char, bool quiet)
 {
-    switch (operator)
+    switch (operator_char)
     {
     case ADDITION:
-        return 1;
+        return true;
     case SUBTRACTION:
-        return 1;
+        return true;
     case DIVISION:
-        return 1;
-        break;
+        return true;
     case MULTIPLICATION:
-        return 1;
-        break;
+        return true;
     case EXPONENTIATION:
-        return 1;
-        break;
+        return true;
     case MODULUS:
-        return 1;
-        break;
+        return true;
     case LEFT_PAREN:
-        return 1;
-        break;
+        return true;
     case RIGHT_PAREN:
-        return 1;
-        break;
+        return true;
     default:
         if (!quiet)
         {
             printf("That wasn't a valid operator\n");
         }
-        return 0;
+        return false;
     }
 }
 
-bool validate_input(char *buffer, int bufferSize)
+bool validate_input(char *buffer, unsigned long bufferSize)
 {
     bool isOperator = true;
     // Start true to see if the user starts with an operator
     int paren_counter = 0;
-    for (int i = 0; i < bufferSize; i++)
+    for (unsigned long i = 0; i < bufferSize; i++)
     {
         /* Check that character is a number, operator or space,
         and that operators are not consecutive. */
@@ -88,7 +82,7 @@ bool validate_input(char *buffer, int bufferSize)
         if (buffer[i] == '\n' || buffer[i] == '\r')
         {
             buffer[i] = '\000';
-            buffer[i + 1] = '\000'; // What if max buffer size?
+            buffer[i + 1] = '\000'; // TODO: What if max buffer size?
             break;                  // Do check isOperator
         }
         // Check that operators aren't repeated
@@ -116,56 +110,47 @@ bool validate_input(char *buffer, int bufferSize)
     return true;
 }
 
-void get_input_validate(char *buffer, int bufferSize)
+void get_input_validate(char *buffer, unsigned long bufferSize)
 {
     do
     {
         memset(buffer, 0, bufferSize);
         // Clear for if the user fails the first time
         printf("Enter your equation: ");
-        fgets(buffer, bufferSize, stdin);
+        fgets(buffer, (int)bufferSize, stdin);
     } while (!validate_input(buffer, bufferSize));
 }
 
-int operator_precedence(char operator)
+int operator_precedence(char operator_char)
 {
-    switch (operator)
+    switch (operator_char)
     {
     case (LEFT_PAREN):
         return 1;
-        break;
     case (ADDITION):
         return 2;
-        break;
     case (SUBTRACTION):
         return 2;
-        break;
     case (MULTIPLICATION):
         return 3;
-        break;
     case (DIVISION):
         return 3;
-        break;
     case (MODULUS):
         return 3;
-        break;
     case (EXPONENTIATION):
         return 4;
-        break;
     case (RIGHT_PAREN):
         return 5;
-        break;
     default:
         return 0;
-        break;
     }
 }
 
-void infix_to_postfix(char *input, int inputSize, char *output, int outputSize)
+bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsigned long outputSize)
 {
     Stack STACK = {NULL, 0};
-    int outputCounter = 0;
-    for (int i = 0; i < inputSize; i++)
+    unsigned long outputCounter = 0;
+    for (unsigned long i = 0; i < inputSize && outputCounter < outputSize; i++)
     {
         if (input[i] == '\000')
         {
@@ -178,18 +163,20 @@ void infix_to_postfix(char *input, int inputSize, char *output, int outputSize)
         if (isdigit(input[i]))
         {
             output[outputCounter] = input[i];
-            // strcat(output, input[i]);
             outputCounter++;
             continue;
         }
         if (input[i] == LEFT_PAREN)
         {
-            Stack_push(&STACK, LEFT_PAREN);
+            if (!Stack_push(&STACK, LEFT_PAREN))
+            {
+                return false;
+            }
             continue;
         }
         if (input[i] == RIGHT_PAREN)
         {
-            while (Stack_peek(STACK) != LEFT_PAREN)
+            while (Stack_peek(STACK) != LEFT_PAREN && outputCounter < outputSize)
             {
                 output[outputCounter] = ' ';
                 outputCounter++;
@@ -200,20 +187,22 @@ void infix_to_postfix(char *input, int inputSize, char *output, int outputSize)
             Stack_pop(&STACK);
             continue;
         }
-        while (STACK.length > 0 && operator_precedence(Stack_peek(STACK)) >= operator_precedence(input[i]))
+        while (STACK.length > 0 && operator_precedence((char)Stack_peek(STACK)) >= operator_precedence(input[i]) && outputCounter < outputSize)
         {
             output[outputCounter] = ' ';
             outputCounter++;
             output[outputCounter] = (char)Stack_pop(&STACK);
             outputCounter++;
-            // strcat(output, (char)Stack_pop(&STACK));
         }
         output[outputCounter] = ' ';
         outputCounter++;
-        Stack_push(&STACK, input[i]);
+        if (!Stack_push(&STACK, input[i]))
+        {
+            return false;
+        }
     }
 
-    while (STACK.length > 0)
+    while (STACK.length > 0 && outputCounter < outputSize)
     {
         output[outputCounter] = ' ';
         outputCounter++;
@@ -222,11 +211,17 @@ void infix_to_postfix(char *input, int inputSize, char *output, int outputSize)
         // strcat(output, (char)Stack_pop(&STACK));
     }
     Stack_free(&STACK);
+
+    if (outputCounter >= outputSize)
+    {
+        printf("infix_to_postfix: insufficient output buffer size.");
+        return false;
+    }
 }
 
-bool evaluate(char operator, double value_1, double value_2, double *result)
+bool evaluate(char operator_char, double value_1, double value_2, double *result)
 {
-    switch (operator)
+    switch (operator_char)
     {
     case ADDITION:
         *result = value_1 + value_2;
@@ -242,15 +237,12 @@ bool evaluate(char operator, double value_1, double value_2, double *result)
         }
         *result = value_1 / value_2;
         return true;
-        break;
     case MULTIPLICATION:
         *result = value_1 * value_2;
         return true;
-        break;
     case EXPONENTIATION:
         *result = pow(value_1, value_2);
         return true;
-        break;
     case MODULUS:
         if (value_2 == 0)
         {
@@ -259,14 +251,13 @@ bool evaluate(char operator, double value_1, double value_2, double *result)
         }
         *result = fmod(value_1, value_2);
         return true;
-        break;
     default:
         printf("That wasn't a valid operator\n");
         return false;
     }
 }
 
-bool evaluate_postfix(char *expression, int expressionSize, double *result)
+bool evaluate_postfix(char *expression, double *result)
 {
     Stack STACK = {NULL, 0};
     char *token = strtok(expression, " "); // TODO: An array would be better here
@@ -283,12 +274,18 @@ bool evaluate_postfix(char *expression, int expressionSize, double *result)
                 // result to value, so no weirdness occurs.
                 return false;
             }
-            Stack_push(&STACK, value);
+            if (!Stack_push(&STACK, value))
+            {
+                return false;
+            }
         }
         else
         {
             sscanf(token, "%lf", &value);
-            Stack_push(&STACK, value);
+            if (!Stack_push(&STACK, value))
+            {
+                return false;
+            }
         }
         token = strtok(NULL, " ");
     }

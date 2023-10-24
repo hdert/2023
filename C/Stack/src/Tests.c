@@ -7,7 +7,7 @@
 #include "Stack.h"
 #include "munit.h"
 
-void assert_Stack(Stack STACK, char *expectation)
+static void assert_Stack(Stack STACK, char *expectation)
 {
     Head HEAD = {STACK.ptr, STACK.length};
     assert_LinkedList(HEAD, expectation);
@@ -15,14 +15,13 @@ void assert_Stack(Stack STACK, char *expectation)
 
 int main(void)
 {
-    char str_buffer[200];
     Stack STACK = {NULL, 0};
     assert_Stack(STACK, "{}");
     assert_int(STACK.length, ==, 0);
-    Stack_push(&STACK, 21);
+    assert_true(Stack_push(&STACK, 21));
     assert_Stack(STACK, "{21}");
     assert_int(STACK.length, ==, 1);
-    Stack_push(&STACK, 19);
+    assert_true(Stack_push(&STACK, 19));
     assert_Stack(STACK, "{19, 21}");
     assert_int(STACK.length, ==, 2);
     assert_int(Stack_peek(STACK), ==, 19);
@@ -32,8 +31,8 @@ int main(void)
     assert_int(Stack_pop(&STACK), ==, 21);
     assert_Stack(STACK, "{}");
     assert_int(STACK.length, ==, 0);
-    Stack_push(&STACK, 21);
-    Stack_push(&STACK, 22);
+    assert_true(Stack_push(&STACK, 21));
+    assert_true(Stack_push(&STACK, 22));
     assert_Stack(STACK, "{22, 21}");
     assert_int(STACK.length, ==, 2);
     Stack_free(&STACK);

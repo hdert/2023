@@ -16,15 +16,17 @@ int main(void)
     {
         get_input_validate(input, sizeof input - 1);
 
-        infix_to_postfix(input, sizeof input, output, sizeof output);
+        if (!infix_to_postfix(input, sizeof input, output, sizeof output))
+        {
+            // TODO: Failure message
+            continue;
+        }
 
-        if (!evaluate_postfix(output, sizeof output, &result))
+        if (!evaluate_postfix(output, &result))
         {
             continue;
         }
 
         printf("The result is %.6lf\n", result);
     }
-
-    return 0;
 }

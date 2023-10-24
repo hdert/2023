@@ -7,12 +7,15 @@
 #include "munit.h"
 #include "LinkedListTestHelpers.h"
 
-static void LinkedListTest_print_helper(Node *LinkedList, char **running_result)
+static void LinkedListTest_print_helper(Node *LinkedList, char **running_result, unsigned long *resultSize)
 {
-    *running_result += sprintf(*running_result, ", %.0lf", LinkedList->value);
+    int offset;
+    offset = snprintf(*running_result, resultSize, ", %.0lf", LinkedList->value);
+    *running_result += offset;
+    *resultSize -= offset;
     if (LinkedList->ptr != NULL)
     {
-        LinkedListTest_print_helper(LinkedList->ptr, running_result);
+        LinkedListTest_print_helper(LinkedList->ptr, running_result, resultSize);
     }
 }
 
@@ -21,18 +24,29 @@ void LinkedListTest_print(Head HEAD, char *result, unsigned long resultSize)
     memset(result, 0, resultSize);
     // Set the buffer empty for each test
     char *running_result = result;
-    // Preserve the pointer location of result so we can iterate with sprintf
+    // Preserve the pointer location of result so we can iterate with snprintf
+    int offset;
     if (HEAD.ptr == NULL)
     {
-        running_result += sprintf(running_result, "{}");
+        offset = snprintf(running_result, resultSize, "{}");
+        running_result += offset;
+        resultSize -= offset;
+        // In theory, resultSize is guaranteed not to overflow as the offset will only
+        // ever be as large as resultSize because of snprintf. Then further
+        // snprintf's won't write anything to the result, so it'll look weird
+        // but it'll be fine.
         return;
     }
-    running_result += sprintf(running_result, "{%.0lf", HEAD.ptr->value);
+    offset = snprintf(running_result, resultSize, "{%.0lf", HEAD.ptr->value);
+    running_result += offset;
+    resultSize -= offset;
     if (HEAD.ptr->ptr != NULL)
     {
-        LinkedListTest_print_helper(HEAD.ptr->ptr, &running_result);
+        LinkedListTest_print_helper(HEAD.ptr->ptr, &running_result, &resultSize);
     }
-    running_result += sprintf(running_result, "}");
+    offset = snprintf(running_result, resultSize, "}");
+    running_result += offset;
+    resultSize -= offset;
 }
 
 void assert_LinkedList(Head HEAD, char *expectation)

@@ -34,6 +34,7 @@ static bool LinkedList_append_helper(Node *LinkedList, double value)
         LinkedList->ptr = (Node *)malloc(sizeof(Node));
         if (LinkedList->ptr == NULL)
         {
+            printf("Error (LinkedList_append_helper): Failed to allocate memory.\n");
             return false;
         }
         LinkedList->ptr->ptr = NULL;
@@ -51,6 +52,7 @@ bool LinkedList_append(Head *HEAD, double value)
         HEAD->ptr = (Node *)malloc(sizeof(Node));
         if (HEAD->ptr == NULL)
         {
+            printf("Error (LinkedList_append): Failed to allocate memory.\n");
             return false;
         }
         HEAD->ptr->ptr = NULL;
@@ -68,6 +70,7 @@ static bool LinkedList_add_helper(Node **LinkedList, double value, int index)
         *LinkedList = (Node *)malloc(sizeof(Node));
         if (*LinkedList == NULL)
         {
+            printf("Error (LinkedList_add_helper): Failed to allocate memory.\n");
             return false;
         }
         (*LinkedList)->ptr = current_node;

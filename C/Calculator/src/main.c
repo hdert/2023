@@ -18,12 +18,16 @@ int main(void)
 
         if (!infix_to_postfix(input, sizeof input, output, sizeof output))
         {
-            // TODO: Failure message
-            continue;
+            // Failure message already printed by infix_to_postfix
+            // We should break here as all infix_to_postfix errors are fatal
+            // and the cause of the system/code not the user.
+            break;
         }
 
         if (!evaluate_postfix(output, &result))
         {
+            // We continue here as all errors are user caused, so we can just
+            // ask them again for input.
             continue;
         }
 

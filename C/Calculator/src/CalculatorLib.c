@@ -214,7 +214,7 @@ bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsign
 
     if (outputCounter >= outputSize)
     {
-        printf("infix_to_postfix: insufficient output buffer size.");
+        printf("Error (infix_to_postfix): insufficient output buffer size.\n");
         return false;
     }
 }

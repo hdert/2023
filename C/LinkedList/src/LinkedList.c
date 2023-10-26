@@ -1,12 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include "LinkedList.h"
 
 static void LinkedList_print_helper(Node *LinkedList)
 {
     printf(", %lf", LinkedList->value);
-    if (LinkedList->ptr != NULL)
+    if (LinkedList->ptr != nullptr)
     {
         LinkedList_print_helper(LinkedList->ptr);
     }
@@ -14,13 +13,13 @@ static void LinkedList_print_helper(Node *LinkedList)
 
 void LinkedList_print(Head HEAD)
 {
-    if (HEAD.ptr == NULL)
+    if (HEAD.ptr == nullptr)
     {
         printf("{}\n");
         return;
     }
     printf("{%lf", HEAD.ptr->value);
-    if (HEAD.ptr->ptr != NULL)
+    if (HEAD.ptr->ptr != nullptr)
     {
         LinkedList_print_helper(HEAD.ptr->ptr);
     }
@@ -29,15 +28,15 @@ void LinkedList_print(Head HEAD)
 
 static bool LinkedList_append_helper(Node *LinkedList, double value)
 {
-    if (LinkedList->ptr == NULL)
+    if (LinkedList->ptr == nullptr)
     {
         LinkedList->ptr = (Node *)malloc(sizeof(Node));
-        if (LinkedList->ptr == NULL)
+        if (LinkedList->ptr == nullptr)
         {
             printf("Error (LinkedList_append_helper): Failed to allocate memory.\n");
             return false;
         }
-        LinkedList->ptr->ptr = NULL;
+        LinkedList->ptr->ptr = nullptr;
         LinkedList->ptr->value = value;
         return true;
     }
@@ -47,15 +46,15 @@ static bool LinkedList_append_helper(Node *LinkedList, double value)
 bool LinkedList_append(Head *HEAD, double value)
 {
     HEAD->length++;
-    if (HEAD->ptr == NULL)
+    if (HEAD->ptr == nullptr)
     {
         HEAD->ptr = (Node *)malloc(sizeof(Node));
-        if (HEAD->ptr == NULL)
+        if (HEAD->ptr == nullptr)
         {
             printf("Error (LinkedList_append): Failed to allocate memory.\n");
             return false;
         }
-        HEAD->ptr->ptr = NULL;
+        HEAD->ptr->ptr = nullptr;
         HEAD->ptr->value = value;
         return true;
     }
@@ -68,7 +67,7 @@ static bool LinkedList_add_helper(Node **LinkedList, double value, int index)
     {
         Node *current_node = *LinkedList;
         *LinkedList = (Node *)malloc(sizeof(Node));
-        if (*LinkedList == NULL)
+        if (*LinkedList == nullptr)
         {
             printf("Error (LinkedList_add_helper): Failed to allocate memory.\n");
             return false;
@@ -77,7 +76,7 @@ static bool LinkedList_add_helper(Node **LinkedList, double value, int index)
         (*LinkedList)->value = value;
         return true;
     }
-    if ((*LinkedList)->ptr == NULL)
+    if ((*LinkedList)->ptr == nullptr)
     {
         printf("Index out of bounds!\n");
         return false;
@@ -123,7 +122,7 @@ static bool LinkedList_pop_helper(Node **LinkedList, int index, double *value)
 
 double LinkedList_pop(Head *HEAD, int index)
 {
-    if (HEAD->ptr == NULL)
+    if (HEAD->ptr == nullptr)
     {
         printf("Linked list already empty!\n");
         return 0;
@@ -144,7 +143,7 @@ double LinkedList_pop(Head *HEAD, int index)
 
 static void LinkedList_free_helper(Node *LinkedList)
 {
-    if (LinkedList->ptr != NULL)
+    if (LinkedList->ptr != nullptr)
     {
         LinkedList_free_helper(LinkedList->ptr);
     }
@@ -152,11 +151,11 @@ static void LinkedList_free_helper(Node *LinkedList)
 }
 void LinkedList_free(Head *HEAD)
 {
-    if (HEAD->ptr != NULL)
+    if (HEAD->ptr != nullptr)
     {
         LinkedList_free_helper(HEAD->ptr);
     }
-    HEAD->ptr = NULL;
+    HEAD->ptr = nullptr;
     HEAD->length = 0;
 }
 
@@ -166,7 +165,7 @@ static double LinkedList_get_helper(Node *LinkedList, int index)
     {
         return LinkedList->value;
     }
-    if (LinkedList->ptr == NULL)
+    if (LinkedList->ptr == nullptr)
     {
         printf("Index out of bounds!\n");
         return 0;
@@ -176,7 +175,7 @@ static double LinkedList_get_helper(Node *LinkedList, int index)
 
 double LinkedList_get(Head HEAD, int index)
 {
-    if (HEAD.ptr == NULL)
+    if (HEAD.ptr == nullptr)
     {
         printf("Linked list empty!\n");
         return 0;
@@ -195,7 +194,7 @@ static bool LinkedList_find_helper(Node *LinkedList, double key, int *index)
     {
         return true;
     }
-    if (LinkedList->ptr == NULL)
+    if (LinkedList->ptr == nullptr)
     {
         return false;
     }
@@ -206,7 +205,7 @@ static bool LinkedList_find_helper(Node *LinkedList, double key, int *index)
 bool LinkedList_find(Head HEAD, double key, int *index)
 {
     *index = 0;
-    if (HEAD.ptr == NULL)
+    if (HEAD.ptr == nullptr)
     {
         printf("Linked list empty!\n");
         return false;

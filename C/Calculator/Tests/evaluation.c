@@ -1,7 +1,6 @@
 #define MUNIT_ENABLE_ASSERT_ALIASES
 #include <stdio.h>
 #include <math.h>
-#include <stdbool.h>
 #include <string.h>
 #include "munit.h"
 #include "CalculatorLib.h"
@@ -71,8 +70,7 @@ static int test_evaluate(void)
 }
 static int test_evaluate_postfix(void)
 {
-    char *success_cases[] = {
-        // Doesn't work because strings aren't modifiable
+    const char *success_cases[] = {
         "10 10 +",
         "10 10 -",
         "10 10 /",
@@ -85,7 +83,7 @@ static int test_evaluate_postfix(void)
         1,
         11,
     };
-    char *fail_cases[] = {
+    const char *fail_cases[] = {
         "10 0 /",
         "10 0 %",
         "10 10 10 - /",

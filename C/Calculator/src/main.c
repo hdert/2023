@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <math.h>
-#include <stdbool.h>
 #include <ctype.h>
 // #include <string.h>
 // #include <ctype.h>
@@ -10,8 +9,8 @@
 int main(void)
 {
     double result;
-    char input[100];
-    char output[100];
+    char input[100] = {};
+    char output[100] = {};
     while (true)
     {
         get_input_validate(input, sizeof input - 1);

@@ -1,6 +1,5 @@
 #ifndef CALCULATORLIB_H
 #define CALCULATORLIB_H
-#include <stdbool.h>
 
 typedef enum
 {
@@ -16,7 +15,7 @@ typedef enum
     RIGHT_PAREN = ')'
 } operators;
 
-bool check_valid_operator(char operator_char, bool quiet);
+// bool check_valid_operator(char operator_char, bool quiet);
 
 bool validate_input(char *buffer, unsigned long bufferSize);
 

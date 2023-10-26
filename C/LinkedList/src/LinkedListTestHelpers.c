@@ -1,7 +1,6 @@
 #define MUNIT_ENABLE_ASSERT_ALIASES
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
 #include "LinkedList.h"
 #include "munit.h"
@@ -13,7 +12,7 @@ static void LinkedListTest_print_helper(Node *LinkedList, char **running_result,
     offset = snprintf(*running_result, *resultSize, ", %.0lf", LinkedList->value);
     *running_result += offset;
     *resultSize -= offset;
-    if (LinkedList->ptr != NULL)
+    if (LinkedList->ptr != nullptr)
     {
         LinkedListTest_print_helper(LinkedList->ptr, running_result, resultSize);
     }
@@ -26,7 +25,7 @@ void LinkedListTest_print(Head HEAD, char *result, unsigned long resultSize)
     char *running_result = result;
     // Preserve the pointer location of result so we can iterate with snprintf
     int offset;
-    if (HEAD.ptr == NULL)
+    if (HEAD.ptr == nullptr)
     {
         offset = snprintf(running_result, resultSize, "{}");
         running_result += offset;
@@ -40,7 +39,7 @@ void LinkedListTest_print(Head HEAD, char *result, unsigned long resultSize)
     offset = snprintf(running_result, resultSize, "{%.0lf", HEAD.ptr->value);
     running_result += offset;
     resultSize -= offset;
-    if (HEAD.ptr->ptr != NULL)
+    if (HEAD.ptr->ptr != nullptr)
     {
         LinkedListTest_print_helper(HEAD.ptr->ptr, &running_result, &resultSize);
     }

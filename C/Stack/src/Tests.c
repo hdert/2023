@@ -1,7 +1,6 @@
 #define MUNIT_ENABLE_ASSERT_ALIASES
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include "LinkedList.h"
 #include "LinkedListTestHelpers.h"
 #include "Stack.h"
@@ -9,13 +8,13 @@
 
 static void assert_Stack(Stack STACK, char *expectation)
 {
-    Head HEAD = {STACK.ptr, STACK.length};
+    Head HEAD = {.ptr = STACK.ptr, .length = STACK.length};
     assert_LinkedList(HEAD, expectation);
 }
 
 int main(void)
 {
-    Stack STACK = {NULL, 0};
+    Stack STACK = {};
     assert_Stack(STACK, "{}");
     assert_int(STACK.length, ==, 0);
     assert_true(Stack_push(&STACK, 21));

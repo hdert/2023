@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.27)
 project(Calculator LANGUAGES C)
 include(CTest)
 
+set(CMAKE_C_STANDARD 23)
+
 
 add_executable(Calculator src/main.c)
 

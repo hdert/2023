@@ -6,6 +6,7 @@ include(CTest)
 add_library(LinkedList src/LinkedList.c)
 
 add_library(Munit ../munit/munit.c)
+set_property(TARGET Munit PROPERTY C_STANDARD 11)
 
 add_library(LinkedListTestHelpers src/LinkedListTestHelpers.c)
 

@@ -1,7 +1,6 @@
 #define MUNIT_ENABLE_ASSERT_ALIASES
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
 #include "LinkedList.h"
 #include "munit.h"
@@ -9,7 +8,7 @@
 
 int main(void)
 {
-    Head HEAD = {NULL, 0};
+    Head HEAD = {};
     assert_true(LinkedList_append(&HEAD, 11));
     assert_LinkedList(HEAD, "{11}");
     assert_int(HEAD.length, ==, 1);
@@ -46,7 +45,7 @@ int main(void)
 
     // ****************** Empty_HEAD ******************
 
-    Head Empty_HEAD = {NULL, 0};
+    Head Empty_HEAD = {};
     assert_LinkedList(Empty_HEAD, "{}");
     assert_int(Empty_HEAD.length, ==, 0);
     assert_int(LinkedList_get(Empty_HEAD, 1), ==, 0);
@@ -90,7 +89,7 @@ int main(void)
 
     // ****************** MemLeak_HEAD ******************
 
-    Head MemLeak_HEAD = {NULL, 0};
+    Head MemLeak_HEAD = {};
     for (int i = 0; i < 100; i++)
     {
         assert_true(LinkedList_append(&MemLeak_HEAD, 1));

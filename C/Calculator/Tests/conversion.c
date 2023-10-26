@@ -1,7 +1,6 @@
 #define MUNIT_ENABLE_ASSERT_ALIASES
 #include <stdio.h>
 #include <math.h>
-#include <stdbool.h>
 #include <string.h>
 #include "munit.h"
 #include "CalculatorLib.h"

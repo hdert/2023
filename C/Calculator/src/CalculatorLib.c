@@ -1,39 +1,9 @@
 #include <stdio.h>
 #include <math.h>
-#include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
 #include "Stack.h"
 #include "CalculatorLib.h"
-
-bool check_valid_operator(char operator_char, bool quiet)
-{
-    switch (operator_char)
-    {
-    case ADDITION:
-        return true;
-    case SUBTRACTION:
-        return true;
-    case DIVISION:
-        return true;
-    case MULTIPLICATION:
-        return true;
-    case EXPONENTIATION:
-        return true;
-    case MODULUS:
-        return true;
-    case LEFT_PAREN:
-        return true;
-    case RIGHT_PAREN:
-        return true;
-    default:
-        if (!quiet)
-        {
-            printf("That wasn't a valid operator\n");
-        }
-        return false;
-    }
-}
 
 bool validate_input(char *buffer, unsigned long bufferSize)
 {
@@ -44,25 +14,27 @@ bool validate_input(char *buffer, unsigned long bufferSize)
     {
         /* Check that character is a number, operator or space,
         and that operators are not consecutive. */
-        if (buffer[i] == ' ')
+        switch (buffer[i])
         {
+        case ' ':
             continue;
-        }
-        if (isdigit(buffer[i]))
-        {
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
             isOperator = false;
             continue;
-        }
-        if (buffer[i] == LEFT_PAREN)
-        {
-            // We don't enforce that isOperator is true as
-            // We could be at the start of the equation.
+        case LEFT_PAREN:
             isOperator = true;
             paren_counter++;
             continue;
-        }
-        if (buffer[i] == RIGHT_PAREN)
-        {
+        case RIGHT_PAREN:
             if (isOperator)
             {
                 printf("You cannot end a paren with an operator!\n");
@@ -71,19 +43,17 @@ bool validate_input(char *buffer, unsigned long bufferSize)
             paren_counter--;
             if (paren_counter < 0)
             {
-                // If paren_counter goes below zero at any point,
-                // parentheses are mismatched. This avoids cases like:
-                // 21 + 2 ) * ( 5 / 6
                 printf("Mismatched parentheses!\n");
                 return false;
             }
             continue;
-        }
-        if (buffer[i] == '\n' || buffer[i] == '\r')
-        {
+        case '\n':
+        case '\r':
             buffer[i] = '\000';
-            buffer[i + 1] = '\000'; // TODO: What if max buffer size?
-            break;                  // Do check isOperator
+            buffer[i + 1] = '\000';
+            i = bufferSize;
+            // Stops the for loop, i isn't referenced after this so is fine.
+            continue;
         }
         // Check that operators aren't repeated
         if (isOperator)
@@ -92,7 +62,7 @@ bool validate_input(char *buffer, unsigned long bufferSize)
             return false;
         }
         // Check if it is a valid operator
-        if (!check_valid_operator(buffer[i], false))
+        if (!operator_precedence(buffer[i]))
         {
             printf("You have entered an invalid operator!\n");
             return false;
@@ -149,41 +119,41 @@ int operator_precedence(char operator_char)
 bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsigned long outputSize)
 {
     memset(output, 0, outputSize);
-    Stack STACK = {NULL, 0};
+    Stack STACK = {};
     unsigned long outputCounter = 0;
     for (unsigned long i = 0; i < inputSize && outputCounter < outputSize; i++)
     {
-        if (input[i] == '\000')
+        switch (input[i])
         {
-            break;
-        }
-        if (input[i] == ' ')
-        {
+        case '\000':
+            i = inputSize;
             continue;
-        }
-        if (isdigit(input[i]))
-        {
-            output[outputCounter] = input[i];
-            outputCounter++;
+        case ' ':
             continue;
-        }
-        if (input[i] == LEFT_PAREN)
-        {
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+            output[outputCounter++] = input[i];
+            continue;
+        case LEFT_PAREN:
             if (!Stack_push(&STACK, LEFT_PAREN))
             {
                 Stack_free(&STACK);
                 return false;
             }
             continue;
-        }
-        if (input[i] == RIGHT_PAREN)
-        {
+        case RIGHT_PAREN:
             while (Stack_peek(STACK) != LEFT_PAREN && outputCounter < outputSize)
             {
-                output[outputCounter] = ' ';
-                outputCounter++;
-                output[outputCounter] = (char)Stack_pop(&STACK);
-                outputCounter++;
+                output[outputCounter++] = ' ';
+                output[outputCounter++] = (char)Stack_pop(&STACK);
                 // strcat(output, (char)Stack_pop(&STACK));
             }
             Stack_pop(&STACK);
@@ -191,13 +161,10 @@ bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsign
         }
         while (STACK.length > 0 && operator_precedence((char)Stack_peek(STACK)) >= operator_precedence(input[i]) && outputCounter < outputSize)
         {
-            output[outputCounter] = ' ';
-            outputCounter++;
-            output[outputCounter] = (char)Stack_pop(&STACK);
-            outputCounter++;
+            output[outputCounter++] = ' ';
+            output[outputCounter++] = (char)Stack_pop(&STACK);
         }
-        output[outputCounter] = ' ';
-        outputCounter++;
+        output[outputCounter++] = ' ';
         if (!Stack_push(&STACK, input[i]))
         {
             Stack_free(&STACK);
@@ -263,12 +230,12 @@ bool evaluate(char operator_char, double value_1, double value_2, double *result
 
 bool evaluate_postfix(char *expression, double *result)
 {
-    Stack STACK = {NULL, 0};
+    Stack STACK = {};
     char *token = strtok(expression, " "); // TODO: An array would be better here
     double value;
     while (token != NULL)
     {
-        if (check_valid_operator(*token, true))
+        if (operator_precedence(*token))
         {
             value = Stack_pop(&STACK);
             if (!evaluate(*token, Stack_pop(&STACK), value, &value))

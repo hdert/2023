@@ -174,10 +174,8 @@ bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsign
 
     while (STACK.length > 0 && outputCounter < outputSize)
     {
-        output[outputCounter] = ' ';
-        outputCounter++;
-        output[outputCounter] = (char)Stack_pop(&STACK);
-        outputCounter++;
+        output[outputCounter++] = ' ';
+        output[outputCounter++] = (char)Stack_pop(&STACK);
         // strcat(output, (char)Stack_pop(&STACK));
     }
     Stack_free(&STACK); // This always should run (Check early returns)

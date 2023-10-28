@@ -1,9 +1,4 @@
 #include <stdio.h>
-#include <math.h>
-#include <ctype.h>
-// #include <string.h>
-// #include <ctype.h>
-// #include "Stack.h"
 #include "CalculatorLib.h"
 
 int main(void)

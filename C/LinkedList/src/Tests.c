@@ -6,6 +6,25 @@
 #include "munit.h"
 #include "LinkedListTestHelpers.h"
 
+static void assert_LinkedList_print_no_overflow(void)
+{
+    Head HEAD = {};
+    int i = 100;
+    while (i--)
+    {
+        assert_true(LinkedList_append(&HEAD, 10000));
+    }
+    assert_int(HEAD.length, ==, 100);
+    char str_buffer[300] = {};
+    LinkedListTest_print(HEAD, str_buffer, 200);
+    assert_string_not_equal(str_buffer, "{10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000}");
+    i = 100;
+    while (--i)
+    {
+        assert_char(str_buffer[300 - i], ==, '\000');
+    }
+}
+
 int main(void)
 {
     Head HEAD = {};
@@ -105,5 +124,6 @@ int main(void)
     assert_null(HEAD.ptr);
     assert_int(HEAD.length, ==, 0);
     assert_LinkedList(Empty_HEAD, "{}");
+    assert_LinkedList_print_no_overflow();
     return 0;
 }

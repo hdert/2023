@@ -36,6 +36,24 @@ static int test_infix_to_postfix(void)
         "10.123 10.123 +",
         "10.+10.",
         "10. 10. +",
+        "a",
+        "a",
+        "a+a",
+        "a a +",
+        "a*a+a",
+        "a a * a +",
+        "10+a",
+        "10 a +",
+        "a+a",
+        "a a +",
+        ".123",
+        ".123",
+        ".",
+        ".",
+        "123.",
+        "123.",
+        "123.+a",
+        "123. a +",
         NULL,
     };
     char output[100];
@@ -59,6 +77,7 @@ static int test_operator_precedence(void)
     assert_int(operator_precedence('('), ==, 1);
     assert_int(operator_precedence(')'), ==, 5);
     assert_int(operator_precedence('a'), ==, 0);
+    assert_int(operator_precedence('.'), ==, 0);
     return 0;
 }
 

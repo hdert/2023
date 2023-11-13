@@ -78,7 +78,33 @@ static int test_evaluate_postfix(void)
         "10. 10. +",
         "10.123 10.123 +",
         "10. 10.456 *",
+        "a",
+        "a",
+        "a a +",
+        "a a * a +",
+        "10 a +",
+        ".123",
+        ".",
+        "123.",
+        "123. a +",
         NULL,
+    };
+    double success_result_input[] = {
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        10,
+        10,
+        10,
+        10,
+        0,
+        0,
+        .456,
     };
     double success_results[] = {
         20,
@@ -88,27 +114,48 @@ static int test_evaluate_postfix(void)
         20,
         20.246,
         104.56,
+        0,
+        10,
+        20,
+        110,
+        20,
+        0.123,
+        0,
+        123,
+        123.456,
     };
     const char *fail_cases[] = {
         "10 0 /",
         "10 0 %",
         "10 10 10 - /",
         "10 10 10 - %",
+        "10 a /",
+        "10 a %",
         NULL,
     };
-    double result;
+    double fail_result_input[] = {
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    };
+    double result = 0;
     char string[100];
     for (int i = 0; success_cases[i] != NULL; i++)
     {
+        result = success_result_input[i];
         strcpy(string, success_cases[i]);
-        assert_true(evaluate_postfix(string, &result));
+        assert_true(evaluate_postfix(string, result, &result));
         assert_int(result, ==, success_results[i]);
     }
     result = 0;
     for (int i = 0; fail_cases[i] != NULL; i++)
     {
+        result = fail_result_input[i];
         strcpy(string, fail_cases[i]);
-        assert_false(evaluate_postfix(string, &result));
+        assert_false(evaluate_postfix(string, result, &result));
         assert_int(result, ==, 0);
     }
     return 0;

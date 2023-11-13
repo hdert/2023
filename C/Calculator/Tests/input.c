@@ -24,6 +24,7 @@ static int test_check_valid_operator(void)
         '9',
         '&',
         '.',
+        'a',
         '\000'};
     for (int i = 0; success_cases[i] != '\000'; i++)
     {
@@ -67,6 +68,12 @@ static int test_validate_input(void)
         "10.10+10.10",
         "10.999",
         "10.789 * ( 10.123 )",
+        "10 + a",
+        "a",
+        "a+a",
+        ".123",
+        ".",
+        "123.",
         NULL};
     char *fail_cases[] = {
         "10++10",

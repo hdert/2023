@@ -27,6 +27,6 @@ int operator_precedence(char operator_char);
 
 bool evaluate(char operator_char, double value_1, double value_2, double *result);
 
-bool evaluate_postfix(char *expression, double *result);
+bool evaluate_postfix(char *expression, double previousAnswer, double *result);
 
 #endif // CALCULATORLIB_H

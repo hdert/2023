@@ -29,6 +29,7 @@ bool validate_input(char *buffer, unsigned long bufferSize)
         case '7':
         case '8':
         case '9':
+        case 'a':
             isOperator = false;
             continue;
         case '.':
@@ -38,6 +39,7 @@ bool validate_input(char *buffer, unsigned long bufferSize)
                 return false;
             }
             isFloat = true;
+            isOperator = false;
             continue;
         case LEFT_PAREN:
             isOperator = true;
@@ -154,6 +156,7 @@ bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsign
         case '7':
         case '8':
         case '9':
+        case 'a':
         case '.':
             output[outputCounter++] = input[i];
             continue;
@@ -240,7 +243,7 @@ bool evaluate(char operator_char, double value_1, double value_2, double *result
     }
 }
 
-bool evaluate_postfix(char *expression, double *result)
+bool evaluate_postfix(char *expression, double previousAnswer, double *result)
 {
     Stack STACK = {};
     char *token = strtok(expression, " "); // TODO: An array would be better here
@@ -259,6 +262,14 @@ bool evaluate_postfix(char *expression, double *result)
                 return false;
             }
             if (!Stack_push(&STACK, value))
+            {
+                Stack_free(&STACK);
+                return false;
+            }
+        }
+        else if (*token == 'a')
+        {
+            if (!Stack_push(&STACK, previousAnswer))
             {
                 Stack_free(&STACK);
                 return false;

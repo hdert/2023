@@ -8,7 +8,10 @@ int main(void)
     //     - Doesn't seem highly feasible, would have to mix types in array
     //     - There's also no way to tell what type is enclosed
     // - Add keyword ans that takes previous answer's value
-    double result;
+    //     - the keyword 'a' would be a lot easier to implement
+    // - Add implicit multiplication
+    printf("Use the keyword 'a' to substitute the previous answer!\n");
+    double result = 0;
     char input[100] = {};
     char output[100] = {};
     while (true)
@@ -23,7 +26,7 @@ int main(void)
             break;
         }
 
-        if (!evaluate_postfix(output, &result))
+        if (!evaluate_postfix(output, result, &result))
         {
             // We continue here as all errors are user caused, so we can just
             // ask them again for input.

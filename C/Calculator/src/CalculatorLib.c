@@ -8,6 +8,7 @@
 bool validate_input(char *buffer, unsigned long bufferSize)
 {
     bool isOperator = true;
+    bool isFloat = false;
     // Start true to see if the user starts with an operator
     int paren_counter = 0;
     for (unsigned long i = 0; i < bufferSize; i++)
@@ -30,11 +31,21 @@ bool validate_input(char *buffer, unsigned long bufferSize)
         case '9':
             isOperator = false;
             continue;
+        case '.':
+            if (isFloat)
+            {
+                printf("You cannot have more than one period in a floating point number!\n");
+                return false;
+            }
+            isFloat = true;
+            continue;
         case LEFT_PAREN:
             isOperator = true;
+            isFloat = false;
             paren_counter++;
             continue;
         case RIGHT_PAREN:
+            isFloat = false;
             if (isOperator)
             {
                 printf("You cannot end a paren with an operator!\n");
@@ -68,6 +79,7 @@ bool validate_input(char *buffer, unsigned long bufferSize)
             return false;
         }
         isOperator = true;
+        isFloat = false;
         // Break triggers this which upholds that the start of
         // equation this should be set to true
     }
@@ -123,6 +135,8 @@ bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsign
     unsigned long outputCounter = 0;
     for (unsigned long i = 0; i < inputSize && outputCounter < outputSize; i++)
     {
+        // This switch statement is supposedly for performance reasons, over a bunch of if statements.
+        // The empty cases run the case code afterwards, so all numbers trigger the code in case 9.
         switch (input[i])
         {
         case '\000':
@@ -140,6 +154,7 @@ bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsign
         case '7':
         case '8':
         case '9':
+        case '.':
             output[outputCounter++] = input[i];
             continue;
         case LEFT_PAREN:
@@ -154,7 +169,6 @@ bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsign
             {
                 output[outputCounter++] = ' ';
                 output[outputCounter++] = (char)Stack_pop(&STACK);
-                // strcat(output, (char)Stack_pop(&STACK));
             }
             Stack_pop(&STACK);
             continue;

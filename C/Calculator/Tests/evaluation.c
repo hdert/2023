@@ -75,6 +75,9 @@ static int test_evaluate_postfix(void)
         "10 10 -",
         "10 10 /",
         "10 2 3 3 * + + 10 -",
+        "10. 10. +",
+        "10.123 10.123 +",
+        "10. 10.456 *",
         NULL,
     };
     double success_results[] = {
@@ -82,6 +85,9 @@ static int test_evaluate_postfix(void)
         0,
         1,
         11,
+        20,
+        20.246,
+        104.56,
     };
     const char *fail_cases[] = {
         "10 0 /",

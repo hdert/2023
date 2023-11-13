@@ -3,6 +3,11 @@
 
 int main(void)
 {
+    // TODO:
+    // - Assess feasibility of changing the type of postfix equation to an array
+    //     - Doesn't seem highly feasible, would have to mix types in array
+    //     - There's also no way to tell what type is enclosed
+    // - Add keyword ans that takes previous answer's value
     double result;
     char input[100] = {};
     char output[100] = {};

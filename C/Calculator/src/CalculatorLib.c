@@ -130,10 +130,28 @@ int operator_precedence(char operator_char)
     }
 }
 
+static bool add_operator_to_stack(Stack *STACK, char operator, char * output, unsigned long *outputCounter, int outputSize)
+{
+    while (STACK->length > 0 && operator_precedence((char)Stack_peek(*STACK)) >= operator_precedence(operator) && *outputCounter < outputSize)
+    {
+        output[(*outputCounter)++] = ' ';
+        output[(*outputCounter)++] = (char)Stack_pop(STACK);
+    }
+    output[(*outputCounter)++] = ' ';
+    if (!Stack_push(STACK, operator))
+    {
+        Stack_free(STACK);
+        return false;
+    }
+    return true;
+}
+
 bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsigned long outputSize)
 {
     memset(output, 0, outputSize);
     Stack STACK = {};
+    bool isNumber = false;
+    bool wasNumber = false;
     unsigned long outputCounter = 0;
     for (unsigned long i = 0; i < inputSize && outputCounter < outputSize; i++)
     {
@@ -145,6 +163,7 @@ bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsign
             i = inputSize;
             continue;
         case ' ':
+            wasNumber = isNumber;
             continue;
         case '0':
         case '1':
@@ -156,11 +175,40 @@ bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsign
         case '7':
         case '8':
         case '9':
-        case 'a':
         case '.':
+            if (wasNumber)
+            {
+                wasNumber = false;
+                if (!add_operator_to_stack(&STACK, MULTIPLICATION, output, &outputCounter, outputSize))
+                {
+                    return false;
+                }
+            }
+            isNumber = true;
             output[outputCounter++] = input[i];
             continue;
+        case 'a':
+            if (isNumber)
+            {
+                if (!add_operator_to_stack(&STACK, MULTIPLICATION, output, &outputCounter, outputSize))
+                {
+                    return false;
+                }
+            }
+            output[outputCounter++] = input[i];
+            isNumber = true;
+            wasNumber = true;
+            continue;
         case LEFT_PAREN:
+            if (isNumber)
+            {
+                isNumber = false;
+                wasNumber = false;
+                if (!add_operator_to_stack(&STACK, MULTIPLICATION, output, &outputCounter, outputSize))
+                {
+                    return false;
+                }
+            }
             if (!Stack_push(&STACK, LEFT_PAREN))
             {
                 Stack_free(&STACK);
@@ -168,6 +216,7 @@ bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsign
             }
             continue;
         case RIGHT_PAREN:
+            wasNumber = true;
             while (Stack_peek(STACK) != LEFT_PAREN && outputCounter < outputSize)
             {
                 output[outputCounter++] = ' ';
@@ -176,17 +225,12 @@ bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsign
             Stack_pop(&STACK);
             continue;
         }
-        while (STACK.length > 0 && operator_precedence((char)Stack_peek(STACK)) >= operator_precedence(input[i]) && outputCounter < outputSize)
+        if (!add_operator_to_stack(&STACK, input[i], output, &outputCounter, outputSize))
         {
-            output[outputCounter++] = ' ';
-            output[outputCounter++] = (char)Stack_pop(&STACK);
-        }
-        output[outputCounter++] = ' ';
-        if (!Stack_push(&STACK, input[i]))
-        {
-            Stack_free(&STACK);
             return false;
         }
+        isNumber = false;
+        wasNumber = false;
     }
 
     while (STACK.length > 0 && outputCounter < outputSize)

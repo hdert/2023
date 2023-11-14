@@ -7,7 +7,7 @@
 
 static int test_infix_to_postfix(void)
 {
-    char *success_cases[] = {
+    char *success_cases[][2] = {
         "10+10",
         "10 10 +",
         "10 + 10",
@@ -15,13 +15,13 @@ static int test_infix_to_postfix(void)
         "    10+10 *(20)",
         "10 10 20 * +",
         "    10+10 (20)",
-        "10 1020 +",
+        "10 10 20 * +",
         "10/10",
         "10 10 /",
         "10 / (10)",
         "10 10 /",
-        "10(10)",
-        "1010",
+        // "10(10)",
+        // "1010",
         "10*(10)",
         "10 10 *",
         "10 * ( 10 ) ",
@@ -54,14 +54,61 @@ static int test_infix_to_postfix(void)
         "123.",
         "123.+a",
         "123. a +",
+        "10(10)",
+        "10 10 *",
+        "10(10)10",
+        "10 10 * 10 *",
+        "(10)10",
+        "10 10 *",
+        "10 (10)",
+        "10 10 *",
+        "10 10",
+        "10 10 *",
+        "10 + 10 10",
+        "10 10 10 * +",
+        "10.123 10",
+        "10.123 10 *",
+        "(10) 10",
+        "10 10 *",
+        "a a",
+        "a a *",
+        "aa",
+        "a a *",
+        "10a",
+        "10 a *",
+        "10 a",
+        "10 a *",
+        "10 (a)",
+        "10 a *",
+        "a (10)",
+        "a 10 *",
+        "10a10",
+        "10 a * 10 *",
+        "a10",
+        "a 10 *",
+        "10 a 10",
+        "10 a * 10 *",
+        "a 10",
+        "a 10 *",
+        "10 ^ 10 10",
+        "10 10 ^ 10 *",
+        "aaa",
+        "a a * a *",
+        "a a a",
+        "a a * a *",
+        "aa a",
+        "a a * a *",
+        "a aa",
+        "a a * a *",
+        NULL,
         NULL,
     };
     char output[100];
-    for (int i = 0; success_cases[i] != NULL; i += 2)
+    for (int i = 0; success_cases[i][0] != NULL; i += 1)
     {
         memset(output, 0, sizeof output);
-        assert_true(infix_to_postfix(success_cases[i], strlen(success_cases[i]), output, sizeof output));
-        assert_string_equal(output, success_cases[i + 1]);
+        assert_true(infix_to_postfix(success_cases[i][0], strlen(success_cases[i][0]), output, sizeof output));
+        assert_string_equal(output, success_cases[i][1]);
     }
     return 0;
 }

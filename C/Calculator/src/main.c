@@ -4,12 +4,8 @@
 int main(void)
 {
     // TODO:
-    // - Assess feasibility of changing the type of postfix equation to an array
-    //     - Doesn't seem highly feasible, would have to mix types in array
-    //     - There's also no way to tell what type is enclosed
-    // - Add keyword ans that takes previous answer's value
-    //     - the keyword 'a' would be a lot easier to implement
-    // - Add implicit multiplication
+    // - Assess whether the stack implementation requires a linked list
+    //     - Maybe switch to having an array with a counter that indicates the end
     printf("Use the keyword 'a' to substitute the previous answer!\n");
     double result = 0;
     char input[100] = {};

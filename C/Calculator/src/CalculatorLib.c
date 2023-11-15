@@ -150,6 +150,10 @@ bool infix_to_postfix(char *input, unsigned long inputSize, char *output, unsign
 {
     memset(output, 0, outputSize);
     Stack STACK = {};
+    if (!Stack_init(&STACK))
+    {
+        return false;
+    }
     bool isNumber = false;
     bool wasNumber = false;
     unsigned long outputCounter = 0;
@@ -290,6 +294,10 @@ bool evaluate(char operator_char, double value_1, double value_2, double *result
 bool evaluate_postfix(char *expression, double previousAnswer, double *result)
 {
     Stack STACK = {};
+    if (!Stack_init(&STACK))
+    {
+        return false;
+    }
     char *token = strtok(expression, " "); // TODO: An array would be better here
     double value;
     while (token != NULL)

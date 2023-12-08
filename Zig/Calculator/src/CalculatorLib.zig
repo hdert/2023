@@ -1,9 +1,6 @@
 const std = @import("std");
 const Stack = @import("Stack");
 
-const stdout = std.io.getStdOut().writer();
-const stdin = std.io.getStdIn().reader();
-
 pub const CalculatorError = error{
     InvalidOperator,
     DivisionByZero,
@@ -45,14 +42,13 @@ const Operator = enum(u8) {
     }
 };
 
-fn validateInput(input: ?[]u8) ![]u8 {
+fn validateInput(input: ?[]u8) ![]const u8 {
     var isOperator = true;
     var isFloat = false;
     var paren_counter: isize = 0;
-    var result: []u8 = undefined;
-    result = input orelse return CalculatorError.EmptyInput;
+    var result: []const u8 = input orelse return CalculatorError.EmptyInput;
     if (@import("builtin").os.tag == .windows) {
-        result = std.mem.trimRight(u8, input orelse return CalculatorError.EmptyInput, "\r");
+        result = std.mem.trimRight(u8, result, "\r");
     }
     for (result) |char| {
         switch (char) {
@@ -100,7 +96,7 @@ fn validateInput(input: ?[]u8) ![]u8 {
     return result;
 }
 
-pub fn getInput(buffer: []u8) ![]u8 {
+pub fn getInput(buffer: []u8, stdout: std.fs.File.Writer, stdin: std.fs.File.Reader) ![]const u8 {
     while (true) {
         try stdout.print("Enter your equation: ", .{});
         const user_input = try stdin.readUntilDelimiterOrEof(buffer, '\n');
@@ -145,7 +141,7 @@ fn addOperatorToStack(stack: *Stack.Stack(Operator), operator: Operator, output:
     try stack.push(operator);
 }
 
-pub fn infixToPostfix(input: []u8, allocator: std.mem.Allocator) ![]u8 {
+pub fn infixToPostfix(input: []const u8, allocator: std.mem.Allocator) ![]u8 {
     var stack = Stack.Stack(Operator).init(allocator);
     defer stack.free();
     var isNumber = false;
@@ -213,7 +209,7 @@ fn evaluate(number_1: f64, number_2: f64, operator: u8) CalculatorError!f64 {
     };
 }
 
-pub fn evaluatePostfix(expression: []u8, previousAnswer: f64, allocator: std.mem.Allocator) !f64 {
+pub fn evaluatePostfix(expression: []u8, previousAnswer: f64, allocator: std.mem.Allocator, stdout: std.fs.File.Writer) !f64 {
     var stack = Stack.Stack(f64).init(allocator);
     defer stack.free();
     var tokens = std.mem.tokenizeScalar(u8, expression, ' ');
@@ -229,7 +225,7 @@ pub fn evaluatePostfix(expression: []u8, previousAnswer: f64, allocator: std.mem
             else => {
                 std.debug.assert(token.len == 1);
                 const value = stack.pop();
-                if (evaluate(value, stack.pop(), token[0])) |result| {
+                if (evaluate(stack.pop(), value, token[0])) |result| {
                     try stack.push(result);
                 } else |err| {
                     switch (err) {

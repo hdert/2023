@@ -1,5 +1,6 @@
 const std = @import("std");
 const Stack = @import("Stack");
+const testing = std.testing;
 
 pub const CalculatorError = error{
     InvalidOperator,
@@ -42,7 +43,7 @@ const Operator = enum(u8) {
     }
 };
 
-fn validateInput(input: ?[]u8) ![]const u8 {
+fn validateInput(input: ?[]const u8) ![]const u8 {
     var isOperator = true;
     var isFloat = false;
     var paren_counter: isize = 0;
@@ -50,6 +51,7 @@ fn validateInput(input: ?[]u8) ![]const u8 {
     if (@import("builtin").os.tag == .windows) {
         result = std.mem.trimRight(u8, result, "\r");
     }
+    if (result.len == 0) return CalculatorError.EmptyInput;
     for (result) |char| {
         switch (char) {
             ' ' => continue,
@@ -79,12 +81,10 @@ fn validateInput(input: ?[]u8) ![]const u8 {
                 }
             },
             else => {
+                _ = try @as(Operator, @enumFromInt(char)).precedence();
                 if (isOperator) {
                     return CalculatorError.SequentialOperators;
                 }
-                _ = evaluate(1, 2, char) catch {
-                    return CalculatorError.InvalidOperator;
-                };
                 isOperator = true;
                 isFloat = false;
             },
@@ -111,7 +111,7 @@ pub fn getInput(buffer: []u8, stdout: std.fs.File.Writer, stdin: std.fs.File.Rea
                     try stdout.print("You cannot enter sequential operators\n", .{});
                 },
                 CalculatorError.InvalidOperator => {
-                    try stdout.print("You have entered an invalid operator", .{});
+                    try stdout.print("You have entered an invalid operator\n", .{});
                 },
                 CalculatorError.EndsWithOperator => {
                     try stdout.print("You cannot finish with an operator\n", .{});
@@ -149,9 +149,13 @@ pub fn infixToPostfix(input: []const u8, allocator: std.mem.Allocator) ![]u8 {
     var output = std.ArrayList(u8).init(allocator);
     defer output.deinit();
     for (input) |char| {
+        std.debug.assert(if (!isNumber) !wasNumber else true);
         switch (char) {
             ' ' => wasNumber = isNumber,
             '0'...'9', '.' => {
+                if (char == '.' and !isNumber) {
+                    try output.append('0');
+                }
                 if (wasNumber) {
                     wasNumber = false;
                     try addOperatorToStack(&stack, .multiplication, &output);
@@ -209,7 +213,7 @@ fn evaluate(number_1: f64, number_2: f64, operator: u8) CalculatorError!f64 {
     };
 }
 
-pub fn evaluatePostfix(expression: []u8, previousAnswer: f64, allocator: std.mem.Allocator, stdout: std.fs.File.Writer) !f64 {
+pub fn evaluatePostfix(expression: []const u8, previousAnswer: f64, allocator: std.mem.Allocator) !f64 {
     var stack = Stack.Stack(f64).init(allocator);
     defer stack.free();
     var tokens = std.mem.tokenizeScalar(u8, expression, ' ');
@@ -229,10 +233,7 @@ pub fn evaluatePostfix(expression: []u8, previousAnswer: f64, allocator: std.mem
                     try stack.push(result);
                 } else |err| {
                     switch (err) {
-                        CalculatorError.DivisionByZero => {
-                            try stdout.print("Cannot divide by 0\n", .{});
-                            return err;
-                        },
+                        CalculatorError.DivisionByZero => return err,
                         else => unreachable,
                     }
                 }
@@ -244,3 +245,351 @@ pub fn evaluatePostfix(expression: []u8, previousAnswer: f64, allocator: std.mem
 }
 
 // TODO: Tests
+
+test "Operator.precedence() validity" {
+    const success_cases = .{
+        '+',
+        '-',
+        '/',
+        '*',
+        '^',
+        '%',
+        '(',
+        ')',
+    };
+    const fail_cases = .{
+        'a',
+        '1',
+        '0',
+        'w',
+        '9',
+        '&',
+        '.',
+        'a',
+    };
+    inline for (success_cases) |case| {
+        _ = try @as(Operator, @enumFromInt(case)).precedence();
+    }
+    inline for (fail_cases) |case| {
+        try testing.expectError(CalculatorError.InvalidOperator, @as(Operator, @enumFromInt(case)).precedence());
+    }
+}
+
+test "validateInput()" {
+    const success_cases = .{
+        "10+10",
+        "10 + 10",
+        "    10+10 (20)",
+        "10/10",
+        "10 / (10)",
+        "10*(10)",
+        "10 * ( 10 ) ",
+        "10",
+        "10.10+10.10",
+        "10.999",
+        "10.789 * ( 10.123 )",
+        "10 + a",
+        "a",
+        "a+a",
+        ".123",
+        ".",
+        "123.",
+        "10(10)",
+        "10(10)10",
+        "(10)10",
+        "10 (10)",
+        "10 10",
+        "10 + 10 10",
+        "10.123 10",
+        "(10) 10",
+        "a a",
+        "aa",
+        "10a",
+        "10 a",
+        "10 (a)",
+        "a (10)",
+        "10a10",
+        "a10",
+        "10 a 10",
+        "a 10",
+        "10 ^ 10 10",
+        "aaa",
+        "a a a",
+        "aa a",
+        "a aa",
+    };
+    const fail_cases = .{
+        "10++10",
+        "10(*10)",
+        "10(10*)",
+        "10*",
+        "10(10)*",
+        "()",
+        "10()",
+        "21 + 2 ) * ( 5 / 6",
+        "10.789.",
+        "10.789.123",
+        "10..",
+        "",
+        null,
+    };
+    inline for (success_cases) |case| {
+        try testing.expectEqualSlices(u8, case, try validateInput(case));
+    }
+    inline for (fail_cases) |case| {
+        if (validateInput(case)) |_| {
+            return error.NotFail;
+        } else |_| {}
+    }
+}
+
+test "infixToPostfix()" {
+    const allocator = std.testing.allocator;
+    const success_cases = [_][]const u8{
+        "10+10",
+        "10 10 +",
+        "10 + 10",
+        "10 10 +",
+        "    10+10 *(20)",
+        "10 10 20 * +",
+        "    10+10 (20)",
+        "10 10 20 * +",
+        "10/10",
+        "10 10 /",
+        "10 / (10)",
+        "10 10 /",
+        // "10(10)",
+        // "1010",
+        "10*(10)",
+        "10 10 *",
+        "10 * ( 10 ) ",
+        "10 10 *",
+        "10",
+        "10",
+        "10 + (10 / 2 * 3) + 10",
+        "10 10 2 / 3 * + 10 +",
+        "10.",
+        "10.",
+        "10.123+10.123",
+        "10.123 10.123 +",
+        "10.+10.",
+        "10. 10. +",
+        "a",
+        "a",
+        "a+a",
+        "a a +",
+        "a*a+a",
+        "a a * a +",
+        "10+a",
+        "10 a +",
+        "a+a",
+        "a a +",
+        ".123",
+        "0.123",
+        ".",
+        "0.",
+        "123.",
+        "123.",
+        "123.+a",
+        "123. a +",
+        "10(10)",
+        "10 10 *",
+        "10(10)10",
+        "10 10 * 10 *",
+        "(10)10",
+        "10 10 *",
+        "10 (10)",
+        "10 10 *",
+        "10 10",
+        "10 10 *",
+        "10 + 10 10",
+        "10 10 10 * +",
+        "10.123 10",
+        "10.123 10 *",
+        "(10) 10",
+        "10 10 *",
+        "a a",
+        "a a *",
+        "aa",
+        "a a *",
+        "10a",
+        "10 a *",
+        "10 a",
+        "10 a *",
+        "10 (a)",
+        "10 a *",
+        "a (10)",
+        "a 10 *",
+        "10a10",
+        "10 a * 10 *",
+        "a10",
+        "a 10 *",
+        "10 a 10",
+        "10 a * 10 *",
+        "a 10",
+        "a 10 *",
+        "10 ^ 10 10",
+        "10 10 ^ 10 *",
+        "aaa",
+        "a a * a *",
+        "a a a",
+        "a a * a *",
+        "aa a",
+        "a a * a *",
+        "a aa",
+        "a a * a *",
+    };
+    try testing.expect(success_cases.len % 2 == 0);
+
+    var i: usize = 0;
+    while (i < success_cases.len) : (i += 2) {
+        const output = try infixToPostfix(success_cases[i], allocator);
+        defer allocator.free(output);
+        try testing.expectEqualSlices(u8, success_cases[i + 1], output);
+    }
+}
+
+test "evaluate()" {
+    const success_cases = .{
+        '+',
+        '-',
+        '/',
+        '*',
+        '^',
+        '%',
+    };
+    const success_case_numbers = [_]comptime_float{
+        10,
+        10,
+        20,
+        10,
+        10,
+        0,
+        10,
+        10,
+        1,
+        10,
+        10,
+        100,
+        10,
+        2,
+        100,
+        30,
+        10,
+        0,
+    };
+    try testing.expect(success_case_numbers.len % 3 == 0);
+    try testing.expect(success_cases.len == success_case_numbers.len / 3);
+    const fail_cases = .{
+        '/',
+        '%',
+        'a',
+        '&',
+        '1',
+    };
+
+    const fail_case_numbers = .{
+        10,
+        0,
+        10,
+        0,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+    };
+    try testing.expect(fail_case_numbers.len % 2 == 0);
+    try testing.expect(fail_cases.len == fail_case_numbers.len / 2);
+    inline for (0..success_cases.len) |i| {
+        try testing.expectEqual(success_case_numbers[i * 3 + 2], try comptime evaluate(success_case_numbers[i * 3], success_case_numbers[i * 3 + 1], success_cases[i]));
+    }
+    inline for (0..fail_cases.len) |i| {
+        if (evaluate(fail_case_numbers[i * 2], fail_case_numbers[i * 2 + 1], fail_cases[i])) |_| {
+            return error.NotFail;
+        } else |_| {}
+    }
+}
+
+test "evaluatePostfix()" {
+    const allocator = std.testing.allocator;
+    const success_cases = [_][]const u8{
+        "10 10 +",
+        "10 10 -",
+        "10 10 /",
+        "10 2 3 3 * + + 10 -",
+        "10. 10. +",
+        "10.123 10.123 +",
+        "10. 10.456 *",
+        "a",
+        "a",
+        "a a +",
+        "a a * a +",
+        "10 a +",
+        ".123",
+        // ".", // TODO: Broken for now
+        "123.",
+        "123. a +",
+    };
+    const success_result_input = [_]f64{
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        10,
+        10,
+        10,
+        10,
+        0,
+        // 0,
+        0,
+        0.456,
+    };
+    const success_results = [_]f64{
+        20,
+        0,
+        1,
+        11,
+        20,
+        20.246,
+        104.56,
+        0,
+        10,
+        20,
+        110,
+        20,
+        0.123,
+        // 0,
+        123,
+        123.456,
+    };
+    const fail_cases = [_][]const u8{
+        "10 0 /",
+        "10 0 %",
+        "10 10 10 - /",
+        "10 10 10 - %",
+        "10 a /",
+        "10 a %",
+    };
+    const fail_result_input = [_]f64{
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    };
+    for (success_cases, success_result_input, success_results) |case, input, result| {
+        try testing.expectEqual(result, try evaluatePostfix(case, input, allocator));
+    }
+    for (fail_cases, fail_result_input) |case, input| {
+        if (evaluatePostfix(case, input, allocator)) |_| {
+            return error.NotFail;
+        } else |_| {}
+    }
+}

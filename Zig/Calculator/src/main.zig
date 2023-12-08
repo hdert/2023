@@ -17,8 +17,11 @@ pub fn main() !void {
         const output = try Calculator.infixToPostfix(input, allocator);
         defer allocator.free(output);
 
-        result = Calculator.evaluatePostfix(output, result, allocator, stdout) catch |err| switch (err) {
-            Calculator.CalculatorError.DivisionByZero => continue,
+        result = Calculator.evaluatePostfix(output, result, allocator) catch |err| switch (err) {
+            Calculator.CalculatorError.DivisionByZero => {
+                try stdout.print("Cannot divide by zero\n", .{});
+                continue;
+            },
             else => return err,
         };
 

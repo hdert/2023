@@ -255,8 +255,6 @@ pub fn evaluatePostfix(expression: []const u8, previousAnswer: f64, allocator: s
     return stack.pop();
 }
 
-// TODO: Tests
-
 test "Operator.precedence() validity" {
     const success_cases = .{
         '+',
@@ -539,7 +537,6 @@ test "evaluatePostfix()" {
         "a a * a +",
         "10 a +",
         ".123",
-        // ".", // TODO: Broken for now
         "123.",
         "123. a +",
     };

@@ -43,6 +43,17 @@ const Operator = enum(u8) {
     }
 };
 
+pub fn printResult(result: f64, stdout: std.fs.File.Writer) !void {
+    const abs_result = if (result < 0) -result else result;
+    const small = abs_result < std.math.pow(f64, 10, -9);
+    const big = abs_result > std.math.pow(f64, 10, 9);
+    if (!(big or small) or result == 0) {
+        try stdout.print("The result is {d}\n", .{result});
+    } else {
+        try stdout.print("The result is {e}\n", .{result});
+    }
+}
+
 fn validateInput(input: ?[]const u8) ![]const u8 {
     var isOperator = true;
     var isFloat = false;

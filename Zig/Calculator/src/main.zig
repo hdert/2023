@@ -25,6 +25,7 @@ pub fn main() !void {
             else => return err,
         };
 
-        try stdout.print("The result is {d:.6}\n", .{result});
+        // try stdout.print("The result is {any}\n", .{result});
+        try Calculator.printResult(result, stdout);
     }
 }

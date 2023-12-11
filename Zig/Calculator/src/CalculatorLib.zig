@@ -92,8 +92,9 @@ fn validateInput(input: ?[]const u8) ![]const u8 {
                 }
             },
             else => {
-                _ = try @as(Operator, @enumFromInt(char)).precedence();
-                if (isOperator) {
+                const operator = @as(Operator, @enumFromInt(char));
+                _ = try operator.precedence();
+                if (isOperator and operator != Operator.subtraction) {
                     return CalculatorError.SequentialOperators;
                 }
                 isOperator = true;
@@ -157,13 +158,18 @@ pub fn infixToPostfix(input: []const u8, allocator: std.mem.Allocator) ![]u8 {
     defer stack.free();
     var isNumber = false;
     var wasNumber = false;
+    var isNegative = false;
     var output = std.ArrayList(u8).init(allocator);
     defer output.deinit();
     for (input) |char| {
         std.debug.assert(if (!isNumber) !wasNumber else true);
+        std.debug.assert(!(isNegative and isNumber));
         switch (char) {
             ' ' => wasNumber = isNumber,
             '0'...'9', '.' => {
+                if (isNegative) {
+                    try output.append('-');
+                }
                 if (char == '.' and !isNumber) {
                     try output.append('0');
                 }
@@ -172,25 +178,36 @@ pub fn infixToPostfix(input: []const u8, allocator: std.mem.Allocator) ![]u8 {
                     try addOperatorToStack(&stack, .multiplication, &output);
                 }
                 isNumber = true;
+                isNegative = false;
                 try output.append(char);
             },
             'a' => {
-                if (isNumber) {
+                if (isNegative) {
+                    try output.append('-');
+                } else if (isNumber) {
                     try addOperatorToStack(&stack, .multiplication, &output);
                 }
                 try output.append(char);
                 isNumber = true;
                 wasNumber = true;
+                isNegative = false;
             },
             '(' => {
-                if (isNumber) {
+                if (isNegative) {
+                    try output.appendSlice("-1");
+                    try addOperatorToStack(&stack, .multiplication, &output);
+                } else if (isNumber) {
                     isNumber = false;
                     wasNumber = false;
                     try addOperatorToStack(&stack, .multiplication, &output);
                 }
                 try stack.push(.left_paren);
+                isNegative = false;
             },
             ')' => {
+                // Invariant that isNumber == true upheld as we are guarenteed the parenthesis section ends with a number
+                std.debug.assert(isNumber == true);
+                std.debug.assert(isNegative == false);
                 wasNumber = true;
                 while (stack.peek() != Operator.left_paren) {
                     try output.append(' ');
@@ -199,9 +216,15 @@ pub fn infixToPostfix(input: []const u8, allocator: std.mem.Allocator) ![]u8 {
                 _ = stack.pop();
             },
             else => {
-                try addOperatorToStack(&stack, @enumFromInt(char), &output);
-                isNumber = false;
-                wasNumber = false;
+                if (!isNumber) {
+                    // We are guarenteed that char is subtraction by the validateInput function.
+                    std.debug.assert(char == '-');
+                    isNegative = !isNegative; // Deal with multiple negatives
+                } else {
+                    try addOperatorToStack(&stack, @enumFromInt(char), &output);
+                    isNumber = false;
+                    wasNumber = false;
+                }
             },
         }
     }
@@ -229,13 +252,12 @@ pub fn evaluatePostfix(expression: []const u8, previousAnswer: f64, allocator: s
     defer stack.free();
     var tokens = std.mem.tokenizeScalar(u8, expression, ' ');
     while (tokens.next()) |token| {
-        switch (token[0]) {
+        switch (token[token.len - 1]) {
             '0'...'9', '.' => {
                 try stack.push(try std.fmt.parseFloat(f64, token));
             },
             'a' => {
-                std.debug.assert(token.len == 1);
-                try stack.push(previousAnswer);
+                try stack.push(if (token[0] == '-') -previousAnswer else previousAnswer);
             },
             else => {
                 std.debug.assert(token.len == 1);
@@ -326,6 +348,42 @@ test "validateInput()" {
         "a a a",
         "aa a",
         "a aa",
+        "-10",
+        "-.",
+        "-a",
+        "10-10",
+        "0-10",
+        "0+-10",
+        "10*-10",
+        "10--10",
+        "10---10",
+        "10+--10",
+        // "-",
+        // "10-",
+        "10-.",
+        "10--a",
+        "-0",
+        "-.0",
+        "-0.",
+        // "--",
+        "--0",
+        "--.",
+        "--.0",
+        "--0.0",
+        "--0.",
+        // "-0.-",
+        "-0.-0",
+        // ".-",
+        ".-0",
+        "0.0--0",
+        ".--0",
+        ". -. -0",
+        ".--.",
+        "--a",
+        "-(10+5)",
+        "--(10+5)",
+        "10-(10+5)",
+        "10+-(10+5)",
     };
     const fail_cases = .{
         "10++10",
@@ -340,6 +398,12 @@ test "validateInput()" {
         "10.789.123",
         "10..",
         "",
+        "-",
+        "-0.-",
+        "10-",
+        "--",
+        ".-",
+        ". -. -",
         null,
     };
     inline for (success_cases) |case| {
@@ -447,6 +511,75 @@ test "infixToPostfix()" {
         "a a * a *",
         "a aa",
         "a a * a *",
+        "-10",
+        "-10",
+        "-.",
+        "-0.",
+        "-a",
+        "-a",
+        "10-10",
+        "10 10 -",
+        "0-10",
+        "0 10 -",
+        "0+-10",
+        "0 -10 +",
+        "10*-10",
+        "10 -10 *",
+        "10--10",
+        "10 -10 -",
+        "10---10",
+        "10 10 -",
+        "10+--10",
+        "10 10 +",
+        // "-",
+        // "10-",
+        "10-.",
+        "10 0. -",
+        "10--a",
+        "10 -a -",
+        "-0",
+        "-0",
+        "-.0",
+        "-0.0",
+        "-0.",
+        "-0.",
+        // "--",
+        "--0",
+        "0",
+        "--.",
+        "0.",
+        "--.0",
+        "0.0",
+        "--0.0",
+        "0.0",
+        "--0.",
+        "0.",
+        // "-0.-",
+        "-0.-0",
+        "-0. 0 -",
+        // ".-",
+        ".-0",
+        "0. 0 -",
+        "0.0--0",
+        "0.0 -0 -",
+        ".--0",
+        "0. -0 -",
+        // ". -. -",
+        // "0. -0. -",
+        ". -. -0",
+        "0. 0. - 0 -",
+        ".--.",
+        "0. -0. -",
+        "--a",
+        "a",
+        "-(10+5)",
+        "-1 10 5 + *",
+        "--(10+5)",
+        "10 5 +",
+        "10-(10+5)",
+        "10 10 5 + -",
+        "10+-(10+5)",
+        "10 -1 10 5 + * +",
     };
     try testing.expect(success_cases.len % 2 == 0);
 
@@ -539,6 +672,37 @@ test "evaluatePostfix()" {
         ".123",
         "123.",
         "123. a +",
+        "-10",
+        "-0.",
+        "-a",
+        "10 10 -",
+        "0 10 -",
+        "0 -10 +",
+        "10 -10 *",
+        "10 -10 -",
+        "10 10 -",
+        "10 10 +",
+        "10 0. -",
+        "10 -a -",
+        "-0",
+        "-0.0",
+        "-0.",
+        "0",
+        "0.",
+        "0.0",
+        "0.0",
+        "0.",
+        "-0. 0 -",
+        "0. 0 -",
+        "0.0 -0 -",
+        "0. -0 -",
+        "0. 0. - 0 -",
+        "0. -0. -",
+        "a",
+        "-1 10 5 + *",
+        "10 5 +",
+        "10 10 5 + -",
+        "10 -1 10 5 + * +",
     };
     const success_result_input = [_]f64{
         0,
@@ -557,6 +721,37 @@ test "evaluatePostfix()" {
         // 0,
         0,
         0.456,
+        0,
+        0,
+        10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        -10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        10,
+        0,
+        0,
+        0,
+        0,
     };
     const success_results = [_]f64{
         20,
@@ -575,6 +770,37 @@ test "evaluatePostfix()" {
         // 0,
         123,
         123.456,
+        -10,
+        0,
+        -10,
+        0,
+        -10,
+        -10,
+        -100,
+        20,
+        0,
+        20,
+        10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        10,
+        -15,
+        15,
+        -5,
+        -5,
     };
     const fail_cases = [_][]const u8{
         "10 0 /",
@@ -583,6 +809,7 @@ test "evaluatePostfix()" {
         "10 10 10 - %",
         "10 a /",
         "10 a %",
+        "--10",
     };
     const fail_result_input = [_]f64{
         0,
@@ -591,9 +818,13 @@ test "evaluatePostfix()" {
         0,
         0,
         0,
+        0,
     };
-    for (success_cases, success_result_input, success_results) |case, input, result| {
-        try testing.expectEqual(result, try evaluatePostfix(case, input, allocator));
+    for (success_cases, success_result_input, success_results, 0..) |case, input, result, i| {
+        testing.expectEqual(result, try evaluatePostfix(case, input, allocator)) catch |err| {
+            std.debug.print("Expected: {d}\nCase: {s}\nPrevious Answer: {d}\nNumber: {d}\n", .{ result, case, input, i });
+            return err;
+        };
     }
     for (fail_cases, fail_result_input) |case, input| {
         if (evaluatePostfix(case, input, allocator)) |_| {

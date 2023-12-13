@@ -19,7 +19,7 @@ pub fn main() !void {
 
         result = Calculator.evaluatePostfix(output, result, allocator) catch |err| switch (err) {
             Calculator.Error.DivisionByZero => {
-                try stdout.print("Cannot divide by zero\n", .{});
+                try Calculator.printError(err, stdout);
                 continue;
             },
             else => return err,

@@ -19,6 +19,20 @@ pub const Error = error{
     InvalidFloat,
 };
 
+pub fn printError(err: anyerror, stdout: std.fs.File.Writer) !void {
+    switch (err) {
+        Error.InvalidOperator => try stdout.print("You have entered an invalid operator\n", .{}),
+        Error.DivisionByZero => try stdout.print("Cannot divide by zero\n", .{}),
+        Error.EmptyInput => try stdout.print("You cannot have an empty input\n", .{}),
+        Error.SequentialOperators => try stdout.print("You cannot enter sequential operators\n", .{}),
+        Error.EndsWithOperator => try stdout.print("You cannot finish with an operator\n", .{}),
+        Error.ParenEndsWithOperator => try stdout.print("You cannot end a parentheses block with an operator\n", .{}),
+        Error.ParenMismatched => try stdout.print("Mismatched parentheses!\n", .{}),
+        Error.InvalidFloat => try stdout.print("You cannot have more than one period in a floating point number\n", .{}),
+        else => return err,
+    }
+}
+
 pub const Operator = enum(u8) {
     addition = '+',
     subtraction = '-',
@@ -122,27 +136,7 @@ pub fn getInput(buffer: []u8, stdout: std.fs.File.Writer, stdin: std.fs.File.Rea
             return result;
         } else |err| {
             switch (err) {
-                Error.EmptyInput => {
-                    try stdout.print("You cannot have an empty input\n", .{});
-                },
-                Error.SequentialOperators => {
-                    try stdout.print("You cannot enter sequential operators\n", .{});
-                },
-                Error.InvalidOperator => {
-                    try stdout.print("You have entered an invalid operator\n", .{});
-                },
-                Error.EndsWithOperator => {
-                    try stdout.print("You cannot finish with an operator\n", .{});
-                },
-                Error.ParenEndsWithOperator => {
-                    try stdout.print("You cannot end a parentheses block with an operator\n", .{});
-                },
-                Error.ParenMismatched => {
-                    try stdout.print("Mismatched parentheses!\n", .{});
-                },
-                Error.InvalidFloat => {
-                    try stdout.print("You cannot have more than one period in a floating point number\n", .{});
-                },
+                Error.EmptyInput, Error.SequentialOperators, Error.InvalidOperator, Error.EndsWithOperator, Error.ParenEndsWithOperator, Error.ParenMismatched, Error.InvalidFloat => try printError(err, stdout),
                 Error.DivisionByZero => unreachable,
                 else => return err,
             }

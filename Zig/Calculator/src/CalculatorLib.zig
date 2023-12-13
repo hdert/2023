@@ -1,6 +1,5 @@
 //! A library for taking in user equations and evaluating them.
 //! TODO:
-//! - Split tests into separate file
 //! - Add support for errors that show where the error originated
 //! - Add support for multi-character operators
 //! - Add support for arbitrary functions that can be passed in by the caller.
@@ -74,6 +73,30 @@ pub fn printResult(result: f64, stdout: std.fs.File.Writer) !void {
     }
 }
 
+/// Evaluate an infix expression.
+/// This chains together a bunch of library functions to do this.
+/// previousAnswer defaults to 0
+/// If called with a valid stdout, prints errors to it using printError.
+/// Passes errors back to caller regardless of stdout being defined.
+pub fn evaluateInfix(equation: ?[]const u8, previousAnswer: ?f64, stdout: ?std.fs.File.Writer, allocator: std.mem.Allocator) !f64 {
+    const result = validateInput(equation) catch |err| switch (err) {
+        Error.DivisionByZero => unreachable,
+        else => {
+            if (stdout) |out| try printError(err, out);
+            return err;
+        },
+    };
+    const output = try infixToPostfix(result, allocator);
+    defer allocator.free(output);
+    return evaluatePostfix(output, previousAnswer orelse 0, allocator) catch |err| switch (err) {
+        Error.DivisionByZero => {
+            if (stdout) |out| try printError(err, out);
+            return err;
+        },
+        else => return err,
+    };
+}
+
 pub fn validateInput(input: ?[]const u8) ![]const u8 {
     var isOperator = true;
     var isFloat = false;
@@ -136,9 +159,9 @@ pub fn getInput(buffer: []u8, stdout: std.fs.File.Writer, stdin: std.fs.File.Rea
             return result;
         } else |err| {
             switch (err) {
-                Error.EmptyInput, Error.SequentialOperators, Error.InvalidOperator, Error.EndsWithOperator, Error.ParenEndsWithOperator, Error.ParenMismatched, Error.InvalidFloat => try printError(err, stdout),
                 Error.DivisionByZero => unreachable,
-                else => return err,
+                // This will return if there is a non-internal error
+                else => try printError(err, stdout),
             }
         }
     }

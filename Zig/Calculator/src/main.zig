@@ -14,18 +14,11 @@ pub fn main() !void {
     while (true) {
         const input = try Calculator.getInput(buffer[0..], stdout, stdin);
 
-        const output = try Calculator.infixToPostfix(input, allocator);
-        defer allocator.free(output);
-
-        result = Calculator.evaluatePostfix(output, result, allocator) catch |err| switch (err) {
-            Calculator.Error.DivisionByZero => {
-                try Calculator.printError(err, stdout);
-                continue;
-            },
+        result = Calculator.evaluateInfix(input, result, stdout, allocator) catch |err| switch (err) {
+            Calculator.Error.DivisionByZero => continue,
             else => return err,
         };
 
-        // try stdout.print("The result is {any}\n", .{result});
         try Calculator.printResult(result, stdout);
     }
 }

@@ -90,7 +90,7 @@ pub const InfixEquation = struct {
         while (true) {
             try stdout.print("Enter your equation: ", .{});
             const user_input = try stdin.readUntilDelimiterOrEof(buffer, '\n');
-            if (Self.fromString(user_input, stdout, allocator)) |result| {
+            if (fromString(user_input, stdout, allocator)) |result| {
                 return result;
             } else |err| {
                 switch (err) {
@@ -104,7 +104,7 @@ pub const InfixEquation = struct {
 
     pub fn fromString(input: ?[]const u8, stdout: ?std.fs.File.Writer, allocator: std.mem.Allocator) !Self {
         return Self{
-            .data = Self.validateInput(input) catch |err| switch (err) {
+            .data = validateInput(input) catch |err| switch (err) {
                 Error.DivisionByZero => unreachable,
                 else => {
                     if (stdout) |out| try printError(err, out);
@@ -197,7 +197,7 @@ pub const PostfixEquation = struct {
 
     pub fn fromInfixEquation(equation: InfixEquation) !Self {
         return Self{
-            .data = try Self.infixToPostfix(equation),
+            .data = try infixToPostfix(equation),
             .stdout = equation.stdout,
             .allocator = equation.allocator,
         };
@@ -276,7 +276,7 @@ pub const PostfixEquation = struct {
                     }
                     if (wasNumber) {
                         wasNumber = false;
-                        try Self.addOperatorToStack(&stack, .multiplication, &output);
+                        try addOperatorToStack(&stack, .multiplication, &output);
                     }
                     isNumber = true;
                     isNegative = false;
@@ -286,7 +286,7 @@ pub const PostfixEquation = struct {
                     if (isNegative) {
                         try output.append('-');
                     } else if (isNumber) {
-                        try Self.addOperatorToStack(&stack, .multiplication, &output);
+                        try addOperatorToStack(&stack, .multiplication, &output);
                     }
                     try output.append(char);
                     isNumber = true;
@@ -296,11 +296,11 @@ pub const PostfixEquation = struct {
                 '(' => {
                     if (isNegative) {
                         try output.appendSlice("-1");
-                        try Self.addOperatorToStack(&stack, .multiplication, &output);
+                        try addOperatorToStack(&stack, .multiplication, &output);
                     } else if (isNumber) {
                         isNumber = false;
                         wasNumber = false;
-                        try Self.addOperatorToStack(&stack, .multiplication, &output);
+                        try addOperatorToStack(&stack, .multiplication, &output);
                     }
                     try stack.push(.left_paren);
                     isNegative = false;
@@ -322,7 +322,7 @@ pub const PostfixEquation = struct {
                         std.debug.assert(char == '-');
                         isNegative = !isNegative; // Deal with multiple negatives
                     } else {
-                        try Self.addOperatorToStack(&stack, @enumFromInt(char), &output);
+                        try addOperatorToStack(&stack, @enumFromInt(char), &output);
                         isNumber = false;
                         wasNumber = false;
                     }

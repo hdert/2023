@@ -22,7 +22,8 @@ pub const Error = error{
     InvalidFloat,
 };
 
-fn printError(err: anyerror, stdout: std.fs.File.Writer) !void {
+fn printError(err: anyerror, stdout: std.fs.File.Writer, start: ?usize, end: ?usize) !void {
+    std.debug.assert(if (start) |_| end != null else true);
     switch (err) {
         Error.InvalidOperator => try stdout.print("You have entered an invalid operator\n", .{}),
         Error.DivisionByZero => try stdout.print("Cannot divide by zero\n", .{}),
@@ -92,13 +93,7 @@ pub const InfixEquation = struct {
             const user_input = try stdin.readUntilDelimiterOrEof(buffer, '\n');
             if (fromString(user_input, stdout, allocator)) |result| {
                 return result;
-            } else |err| {
-                switch (err) {
-                    Error.DivisionByZero => unreachable,
-                    // This will return if there is a non-internal error
-                    else => try printError(err, stdout),
-                }
-            }
+            } else |_| {}
         }
     }
 
@@ -107,7 +102,7 @@ pub const InfixEquation = struct {
             .data = validateInput(input) catch |err| switch (err) {
                 Error.DivisionByZero => unreachable,
                 else => {
-                    if (stdout) |out| try printError(err, out);
+                    if (stdout) |out| try printError(err, out, null, null);
                     return err;
                 },
             },
@@ -126,7 +121,7 @@ pub const InfixEquation = struct {
     /// If InfixEquation has a valid stdout, prints errors to it using printError.
     /// Passes errors back to caller regardless of stdout being defined.
     pub fn evaluate(self: Self, previousAnswer: ?f64) !f64 {
-        const postfixEquation = try PostfixEquation.fromInfixEquation(self);
+        const postfixEquation = try self.toPostfixEquation();
         defer postfixEquation.free();
         return postfixEquation.evaluate(previousAnswer orelse 0);
     }
@@ -226,7 +221,7 @@ pub const PostfixEquation = struct {
                     } else |err| {
                         switch (err) {
                             Error.DivisionByZero => {
-                                if (self.stdout) |out| try printError(err, out);
+                                if (self.stdout) |out| try printError(err, out, null, null);
                                 return err;
                             },
                             else => unreachable,

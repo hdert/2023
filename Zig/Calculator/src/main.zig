@@ -18,7 +18,7 @@ pub fn main() !void {
         defer allocator.free(output);
 
         result = Calculator.evaluatePostfix(output, result, allocator) catch |err| switch (err) {
-            Calculator.CalculatorError.DivisionByZero => {
+            Calculator.Error.DivisionByZero => {
                 try stdout.print("Cannot divide by zero\n", .{});
                 continue;
             },

@@ -1,7 +1,3 @@
-//! TODO:
-//! - Add test cases to test new exposed methods
-//! - Rename test cases to reflect what they actually test
-
 const std = @import("std");
 const Stack = @import("Stack");
 const c = @import("CalculatorLib.zig");
@@ -140,7 +136,7 @@ const test_cases: testData = .{
     },
 };
 
-test "validateInput()" {
+test "InfixEquation.fromString" {
     const fail_cases = .{
         "10++10",  "10(*10)",
         "10(10*)", "10*",
@@ -163,7 +159,7 @@ test "validateInput()" {
     }
 }
 
-test "infixToPostfix()" {
+test "InfixEquation.toPostfixEquation" {
     for (test_cases.infix_equations, test_cases.postfix_equations) |infix, postfix| {
         const infixEquation = try c.InfixEquation.fromString(infix, null, allocator);
         const postfixEquation = try infixEquation.toPostfixEquation();
@@ -172,7 +168,35 @@ test "infixToPostfix()" {
     }
 }
 
-test "evaluatePostfix()" {
+test "PostfixEquation.fromInfixEquation" {
+    for (test_cases.infix_equations, test_cases.postfix_equations) |infix, postfix| {
+        const infixEquation = try c.InfixEquation.fromString(infix, null, allocator);
+        const postfixEquation = try c.PostfixEquation.fromInfixEquation(infixEquation);
+        defer postfixEquation.free();
+        try testing.expectEqualSlices(u8, postfix, postfixEquation.data);
+    }
+}
+
+test "InfixEquation.evaluate" {
+    for (test_cases.infix_equations, test_cases.inputs, test_cases.results) |infix, input, result| {
+        const infix_equation = c.InfixEquation{
+            .data = infix,
+            .allocator = allocator,
+        };
+        const output = try infix_equation.evaluate(input);
+        testing.expectEqual(result, output) catch |err| {
+            std.debug.print("Expected: {d}\nGot: {d}\nCase: {s}\nPrevious Answer: {d}\n", .{
+                result,
+                output,
+                infix,
+                input,
+            });
+            return err;
+        };
+    }
+}
+
+test "PostfixEquation.evaluate" {
     const fail_cases = [_][]const u8{
         "10 0 /",       "10 0 %",
         "10 10 10 - /", "10 10 10 - %",

@@ -66,36 +66,6 @@ const Operator = enum(u8) {
     fn higherOrEqual(self: Self, operator: Self) !bool {
         return try self.precedence() >= try Operator.precedence(operator);
     }
-
-    test "Operator.precedence() validity" {
-        const success_cases = .{
-            '+',
-            '-',
-            '/',
-            '*',
-            '^',
-            '%',
-            '(',
-            ')',
-        };
-        const fail_cases = .{
-            'a',
-            '1',
-            '0',
-            'w',
-            '9',
-            '&',
-            '.',
-            'a',
-        };
-        inline for (success_cases) |case| {
-            _ = try @as(Operator, @enumFromInt(case)).precedence();
-        }
-        inline for (fail_cases) |case| {
-            const result = @as(Operator, @enumFromInt(case)).precedence();
-            try testing.expectError(Error.InvalidOperator, result);
-        }
-    }
 };
 
 pub fn printResult(result: f64, stdout: std.fs.File.Writer) !void {
@@ -377,51 +347,81 @@ pub const PostfixEquation = struct {
             else => Error.InvalidOperator,
         };
     }
-
-    test "calculate()" {
-        const success_cases = .{
-            '+',
-            '-',
-            '/',
-            '*',
-            '^',
-            '%',
-        };
-        const success_case_numbers = [_]comptime_float{
-            10, 10, 20,
-            10, 10, 0,
-            10, 10, 1,
-            10, 10, 100,
-            10, 2,  100,
-            30, 10, 0,
-        };
-        try testing.expect(success_case_numbers.len % 3 == 0);
-        try testing.expect(success_cases.len == success_case_numbers.len / 3);
-        const fail_cases = .{
-            '/',
-            '%',
-            'a',
-            '&',
-            '1',
-        };
-
-        const fail_case_numbers = .{
-            10, 0,
-            10, 0,
-            10, 10,
-            10, 10,
-            10, 10,
-        };
-        try testing.expect(fail_case_numbers.len % 2 == 0);
-        try testing.expect(fail_cases.len == fail_case_numbers.len / 2);
-        inline for (0..success_cases.len) |i| {
-            const result = try comptime PostfixEquation.calculate(success_case_numbers[i * 3], success_case_numbers[i * 3 + 1], success_cases[i]);
-            try testing.expectEqual(success_case_numbers[i * 3 + 2], result);
-        }
-        inline for (0..fail_cases.len) |i| {
-            if (PostfixEquation.calculate(fail_case_numbers[i * 2], fail_case_numbers[i * 2 + 1], fail_cases[i])) |_| {
-                return error.NotFail;
-            } else |_| {}
-        }
-    }
 };
+
+test "Operator.precedence validity" {
+    const success_cases = .{
+        '+',
+        '-',
+        '/',
+        '*',
+        '^',
+        '%',
+        '(',
+        ')',
+    };
+    const fail_cases = .{
+        'a',
+        '1',
+        '0',
+        'w',
+        '9',
+        '&',
+        '.',
+        'a',
+    };
+    inline for (success_cases) |case| {
+        _ = try @as(Operator, @enumFromInt(case)).precedence();
+    }
+    inline for (fail_cases) |case| {
+        const result = @as(Operator, @enumFromInt(case)).precedence();
+        try testing.expectError(Error.InvalidOperator, result);
+    }
+}
+
+test "PostfixEquation.calculate" {
+    const success_cases = .{
+        '+',
+        '-',
+        '/',
+        '*',
+        '^',
+        '%',
+    };
+    const success_case_numbers = [_]comptime_float{
+        10, 10, 20,
+        10, 10, 0,
+        10, 10, 1,
+        10, 10, 100,
+        10, 2,  100,
+        30, 10, 0,
+    };
+    try testing.expect(success_case_numbers.len % 3 == 0);
+    try testing.expect(success_cases.len == success_case_numbers.len / 3);
+    const fail_cases = .{
+        '/',
+        '%',
+        'a',
+        '&',
+        '1',
+    };
+
+    const fail_case_numbers = .{
+        10, 0,
+        10, 0,
+        10, 10,
+        10, 10,
+        10, 10,
+    };
+    try testing.expect(fail_case_numbers.len % 2 == 0);
+    try testing.expect(fail_cases.len == fail_case_numbers.len / 2);
+    inline for (0..success_cases.len) |i| {
+        const result = try comptime PostfixEquation.calculate(success_case_numbers[i * 3], success_case_numbers[i * 3 + 1], success_cases[i]);
+        try testing.expectEqual(success_case_numbers[i * 3 + 2], result);
+    }
+    inline for (0..fail_cases.len) |i| {
+        if (PostfixEquation.calculate(fail_case_numbers[i * 2], fail_case_numbers[i * 2 + 1], fail_cases[i])) |_| {
+            return error.NotFail;
+        } else |_| {}
+    }
+}

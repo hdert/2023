@@ -4,36 +4,6 @@ const c = @import("CalculatorLib.zig");
 const testing = std.testing;
 const allocator = std.testing.allocator;
 
-test "Operator.precedence() validity" {
-    const success_cases = .{
-        '+',
-        '-',
-        '/',
-        '*',
-        '^',
-        '%',
-        '(',
-        ')',
-    };
-    const fail_cases = .{
-        'a',
-        '1',
-        '0',
-        'w',
-        '9',
-        '&',
-        '.',
-        'a',
-    };
-    inline for (success_cases) |case| {
-        _ = try @as(c.Operator, @enumFromInt(case)).precedence();
-    }
-    inline for (fail_cases) |case| {
-        const result = @as(c.Operator, @enumFromInt(case)).precedence();
-        try testing.expectError(c.Error.InvalidOperator, result);
-    }
-}
-
 const test_cases = [_][5][]u8{
     .{"10+10"},       .{"10 + 10"},   .{"    10+10 (20)"},      .{"10/10"},
     .{"10 / (10)"},   .{"10*(10)"},   .{"10 * ( 10 ) "},        .{"10"},
@@ -89,10 +59,10 @@ test "validateInput()" {
         null,
     };
     inline for (success_cases) |case| {
-        try testing.expectEqualSlices(u8, case, try c.validateInput(case));
+        try testing.expectEqualSlices(u8, case, (try c.InfixEquation.fromString(case, null, allocator)).data);
     }
     inline for (fail_cases) |case| {
-        if (c.validateInput(case)) |_| {
+        if (c.InfixEquation.fromString(case, null, allocator)) |_| {
             return error.NotFail;
         } else |_| {}
     }
@@ -181,56 +151,10 @@ test "infixToPostfix()" {
 
     var i: usize = 0;
     while (i < success_cases.len) : (i += 2) {
-        const output = try c.infixToPostfix(success_cases[i], allocator);
-        defer allocator.free(output);
-        try testing.expectEqualSlices(u8, success_cases[i + 1], output);
-    }
-}
-
-test "evaluate()" {
-    const success_cases = .{
-        '+',
-        '-',
-        '/',
-        '*',
-        '^',
-        '%',
-    };
-    const success_case_numbers = [_]comptime_float{
-        10, 10, 20,
-        10, 10, 0,
-        10, 10, 1,
-        10, 10, 100,
-        10, 2,  100,
-        30, 10, 0,
-    };
-    try testing.expect(success_case_numbers.len % 3 == 0);
-    try testing.expect(success_cases.len == success_case_numbers.len / 3);
-    const fail_cases = .{
-        '/',
-        '%',
-        'a',
-        '&',
-        '1',
-    };
-
-    const fail_case_numbers = .{
-        10, 0,
-        10, 0,
-        10, 10,
-        10, 10,
-        10, 10,
-    };
-    try testing.expect(fail_case_numbers.len % 2 == 0);
-    try testing.expect(fail_cases.len == fail_case_numbers.len / 2);
-    inline for (0..success_cases.len) |i| {
-        const result = try comptime c.evaluate(success_case_numbers[i * 3], success_case_numbers[i * 3 + 1], success_cases[i]);
-        try testing.expectEqual(success_case_numbers[i * 3 + 2], result);
-    }
-    inline for (0..fail_cases.len) |i| {
-        if (c.evaluate(fail_case_numbers[i * 2], fail_case_numbers[i * 2 + 1], fail_cases[i])) |_| {
-            return error.NotFail;
-        } else |_| {}
+        const infixEquation = try c.InfixEquation.fromString(success_cases[i], null, allocator);
+        const postfixEquation = try infixEquation.toPostfixEquation();
+        defer postfixEquation.free();
+        try testing.expectEqualSlices(u8, success_cases[i + 1], postfixEquation.data);
     }
 }
 
@@ -302,14 +226,23 @@ test "evaluatePostfix()" {
         0,
     };
     for (success_cases, success_result_input, success_results, 0..) |case, input, result, i| {
-        const eval_result = try c.evaluatePostfix(case, input, allocator);
+        const postfix_equation = c.PostfixEquation{
+            .data = case,
+            .allocator = allocator,
+        };
+        const eval_result = try postfix_equation.evaluate(input);
         testing.expectEqual(result, eval_result) catch |err| {
             std.debug.print("Expected: {d}\nCase: {s}\nPrevious Answer: {d}\nNumber: {d}\n", .{ result, case, input, i });
             return err;
         };
     }
     for (fail_cases, fail_result_input) |case, input| {
-        if (c.evaluatePostfix(case, input, allocator)) |_| {
+        const postfix_equation = c.PostfixEquation{
+            .data = case,
+            .allocator = allocator,
+        };
+        const result = postfix_equation.evaluate(input);
+        if (result) |_| {
             return error.NotFail;
         } else |_| {}
     }

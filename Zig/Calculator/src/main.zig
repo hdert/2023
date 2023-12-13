@@ -12,9 +12,9 @@ pub fn main() !void {
 
     try stdout.print("Use the keyword 'a' to substitute the previous answer\n", .{});
     while (true) {
-        const input = try Calculator.getInput(buffer[0..], stdout, stdin);
+        const infixEquation = try Calculator.InfixEquation.init(buffer[0..], stdout, stdin, allocator);
 
-        result = Calculator.evaluateInfix(input, result, stdout, allocator) catch |err| switch (err) {
+        result = infixEquation.evaluate(result) catch |err| switch (err) {
             Calculator.Error.DivisionByZero => continue,
             else => return err,
         };

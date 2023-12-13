@@ -1,9 +1,18 @@
 const std = @import("std");
 
+const targets: []const std.zig.CrossTarget = &.{
+    .{ .cpu_arch = .x86_64, .os_tag = .linux },
+    // .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu },
+    // .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
+    .{ .cpu_arch = .x86_64, .os_tag = .windows },
+    .{ .cpu_arch = .x86_64, .os_tag = .macos },
+    .{ .cpu_arch = .aarch64, .os_tag = .macos },
+};
+
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
-pub fn build(b: *std.Build) void {
+pub fn build(b: *std.Build) !void {
     // Standard target options allows the person running `zig build` to choose
     // what target to build for. Here we do not override the defaults, which
     // means any target is allowed, and the default is native. Other options
@@ -15,21 +24,48 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
-    const lib = b.addStaticLibrary(.{
-        .name = "CalculatorLib",
-        // In this case the main source file is merely a path, however, in more
-        // complicated build scripts, this could be a generated file.
-        .root_source_file = .{ .path = "src/CalculatorLib.zig" },
-        .target = target,
-        .optimize = optimize,
-    });
-
     const stack = b.addModule("Stack", .{ .source_file = .{ .path = "../Stack/src/Stack.zig" } });
+
+    for (targets) |t| {
+        const lib = b.addStaticLibrary(.{
+            .name = "CalculatorLib",
+            .root_source_file = .{ .path = "src/CalculatorLib.zig" },
+            .target = t,
+            .optimize = .ReleaseSafe,
+        });
+        _ = lib;
+
+        const exe = b.addExecutable(.{
+            .name = "Calculator",
+            .root_source_file = .{ .path = "src/main.zig" },
+            .target = t,
+            .optimize = .ReleaseSafe,
+        });
+        exe.addModule("Stack", stack);
+
+        const target_output = b.addInstallArtifact(exe, .{
+            .dest_dir = .{
+                .override = .{
+                    .custom = try t.zigTriple(b.allocator),
+                },
+            },
+        });
+        b.getInstallStep().dependOn(&target_output.step);
+    }
+
+    // const lib = b.addStaticLibrary(.{
+    //     .name = "CalculatorLib",
+    //     // In this case the main source file is merely a path, however, in more
+    //     // complicated build scripts, this could be a generated file.
+    //     .root_source_file = .{ .path = "src/CalculatorLib.zig" },
+    //     .target = target,
+    //     .optimize = optimize,
+    // });
 
     // This declares intent for the library to be installed into the standard
     // location when the user invokes the "install" step (the default step when
     // running `zig build`).
-    b.installArtifact(lib);
+    // b.installArtifact(lib);
 
     const exe = b.addExecutable(.{
         .name = "Calculator",
@@ -39,10 +75,18 @@ pub fn build(b: *std.Build) void {
     });
     exe.addModule("Stack", stack);
 
+    const target_output = b.addInstallArtifact(exe, .{
+        .dest_dir = .{
+            .override = .{
+                .custom = try target.zigTriple(b.allocator),
+            },
+        },
+    });
+
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
     // step when running `zig build`).
-    b.installArtifact(exe);
+    b.getInstallStep().dependOn(&target_output.step);
 
     // This *creates* a Run step in the build graph, to be executed when another
     // step is evaluated that depends on it. The next line below will establish

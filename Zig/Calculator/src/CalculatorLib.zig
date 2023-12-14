@@ -1,6 +1,5 @@
 //! A library for taking in user equations and evaluating them.
 //! TODO:
-//! - Add support for errors that show where the error originated
 //! - Add support for multi-character operators
 //! - Add support for arbitrary functions that can be passed in by the caller.
 
@@ -22,8 +21,37 @@ pub const Error = error{
     InvalidFloat,
 };
 
-fn printError(err: anyerror, stdout: std.fs.File.Writer, start: ?usize, end: ?usize) !void {
-    std.debug.assert(if (start) |_| end != null else true);
+const ValidateInputResult = union(enum) {
+    result: []const u8,
+    err: struct { Error, ?ErrorLocation },
+};
+
+const ErrorLocation = struct {
+    const Self = @This();
+
+    start: usize,
+    end: usize,
+    length: usize,
+
+    fn init(nums: [3]usize) Self {
+        return Self{
+            .start = nums[0],
+            .end = nums[1],
+            .length = nums[2],
+        };
+    }
+};
+
+fn printError(err: anyerror, stdout: std.fs.File.Writer, location: ?ErrorLocation) !void {
+    const prompt_length = 21;
+    if (location) |l| {
+        std.debug.assert(l.end >= l.start);
+        // for (prompt_length) |_| try stdout.print(" ", .{});
+        for (prompt_length + l.start) |_| try stdout.print("-", .{});
+        for (l.end - l.start) |_| try stdout.print("^", .{});
+        for (l.length - l.end) |_| try stdout.print("-", .{});
+        try stdout.print("\n", .{});
+    }
     switch (err) {
         Error.InvalidOperator => try stdout.print("You have entered an invalid operator\n", .{}),
         Error.DivisionByZero => try stdout.print("Cannot divide by zero\n", .{}),
@@ -99,11 +127,14 @@ pub const InfixEquation = struct {
 
     pub fn fromString(input: ?[]const u8, stdout: ?std.fs.File.Writer, allocator: std.mem.Allocator) !Self {
         return Self{
-            .data = validateInput(input) catch |err| switch (err) {
-                Error.DivisionByZero => unreachable,
-                else => {
-                    if (stdout) |out| try printError(err, out, null, null);
-                    return err;
+            .data = switch (try validateInput(input)) {
+                .result => |r| r,
+                .err => |e| switch (e.@"0") {
+                    Error.DivisionByZero => unreachable,
+                    else => {
+                        if (stdout) |out| try printError(e.@"0", out, e.@"1");
+                        return e.@"0";
+                    },
                 },
             },
             .stdout = stdout,
@@ -128,16 +159,17 @@ pub const InfixEquation = struct {
 
     // Private functions
 
-    fn validateInput(input: ?[]const u8) ![]const u8 {
+    fn validateInput(input: ?[]const u8) !ValidateInputResult {
         var isOperator = true;
         var isFloat = false;
         var paren_counter: isize = 0;
-        var result: []const u8 = input orelse return Error.EmptyInput;
+        var last_op_position: usize = 0;
+        var result: []const u8 = input orelse return ValidateInputResult{ .err = .{ Error.EmptyInput, null } };
         if (@import("builtin").os.tag == .windows) {
             result = std.mem.trimRight(u8, result, "\r");
         }
-        if (result.len == 0) return Error.EmptyInput;
-        for (result) |char| {
+        if (result.len == 0) return ValidateInputResult{ .err = .{ Error.EmptyInput, null } };
+        for (result, 0..) |char, i| {
             switch (char) {
                 ' ' => continue,
                 '0'...'9', 'a' => {
@@ -145,41 +177,48 @@ pub const InfixEquation = struct {
                 },
                 '.' => {
                     if (isFloat) {
-                        return Error.InvalidFloat;
+                        return ValidateInputResult{ .err = .{ Error.InvalidFloat, ErrorLocation.init(.{ last_op_position, i + 1, result.len }) } };
                     }
                     isFloat = true;
                     isOperator = false;
+                    last_op_position = i;
                 },
                 '(' => {
                     isOperator = true;
                     isFloat = false;
                     paren_counter += 1;
+                    last_op_position = i;
                 },
                 ')' => {
-                    isFloat = false;
-                    if (isOperator) {
-                        return Error.ParenEndsWithOperator;
-                    }
                     paren_counter -= 1;
                     if (paren_counter < 0) {
-                        return Error.ParenMismatched;
+                        return ValidateInputResult{ .err = .{ Error.ParenMismatched, ErrorLocation.init(.{ i, i + 1, result.len }) } };
                     }
+                    isFloat = false;
+                    if (isOperator) {
+                        return ValidateInputResult{ .err = .{ Error.ParenEndsWithOperator, ErrorLocation.init(.{ last_op_position, i + 1, result.len }) } };
+                    }
+                    last_op_position = i;
                 },
                 else => {
                     const operator = @as(Operator, @enumFromInt(char));
                     _ = try operator.precedence();
                     if (isOperator and operator != Operator.subtraction) {
-                        return Error.SequentialOperators;
+                        return ValidateInputResult{ .err = .{ Error.SequentialOperators, ErrorLocation.init(.{ last_op_position, i + 1, result.len }) } };
                     }
                     isOperator = true;
                     isFloat = false;
+                    last_op_position = i;
                 },
             }
         }
-        if (isOperator) {
-            return Error.EndsWithOperator;
+        if (paren_counter > 0) {
+            return ValidateInputResult{ .err = .{ Error.ParenMismatched, ErrorLocation.init(.{ last_op_position, last_op_position + 1, result.len }) } };
         }
-        return result;
+        if (isOperator) {
+            return ValidateInputResult{ .err = .{ Error.EndsWithOperator, ErrorLocation.init(.{ last_op_position, last_op_position + 1, result.len }) } };
+        }
+        return ValidateInputResult{ .result = result };
     }
 };
 
@@ -221,7 +260,7 @@ pub const PostfixEquation = struct {
                     } else |err| {
                         switch (err) {
                             Error.DivisionByZero => {
-                                if (self.stdout) |out| try printError(err, out, null, null);
+                                if (self.stdout) |out| try printError(err, out, null);
                                 return err;
                             },
                             else => unreachable,

@@ -147,7 +147,8 @@ test "InfixEquation.fromString" {
         "-",       "-0.-",
         "10-",     "--",
         ".-",      ". -. -",
-        null,
+        null,      "1(",
+        "(",
     };
     inline for (test_cases.infix_equations) |case| {
         try testing.expectEqualSlices(u8, case, (try c.InfixEquation.fromString(case, null, allocator)).data);

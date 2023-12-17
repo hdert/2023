@@ -62,6 +62,14 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+    const coverage = b.option(bool, "test-coverage", "Generate test coverage");
+    if (coverage) |_| {
+        lib_unit_tests.setExecCmd(&[_]?[]const u8{
+            "kcov",
+            "kcov-output",
+            null,
+        });
+    }
     lib_unit_tests.addModule("Stack", stack);
     const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
     const test_step = b.step("test", "Run unit tests");

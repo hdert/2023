@@ -1,6 +1,10 @@
 //! A library for taking in user equations and evaluating them.
 //! TODO:
 //! - Add support for multi-character operators
+//!     - Requirements:
+//!         - Allow more than 26 multi-character opererators
+//!             - I.e. Don't implement as a one char lookup table
+//!         - Use a modifiable lookup table for next feature
 //! - Add support for arbitrary functions that can be passed in by the caller.
 
 const std = @import("std");
@@ -323,17 +327,17 @@ pub const PostfixEquation = struct {
             switch (char) {
                 ' ' => wasNumber = isNumber,
                 '0'...'9', '.' => {
+                    if (wasNumber) {
+                        try addOperatorToStack(&stack, .multiplication, &output);
+                    }
                     if (isNegative) {
                         try output.append('-');
                     }
-                    if (char == '.' and !isNumber) {
+                    if (char == '.' and (!isNumber or wasNumber)) {
                         try output.append('0');
                     }
-                    if (wasNumber) {
-                        wasNumber = false;
-                        try addOperatorToStack(&stack, .multiplication, &output);
-                    }
                     isNumber = true;
+                    wasNumber = false;
                     isNegative = false;
                     try output.append(char);
                 },

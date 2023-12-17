@@ -14,9 +14,9 @@ const testData = struct {
 const test_cases: testData = .{
     .infix_equations = &[_][]const u8{
         "10+10",                  "10 + 10",
-        "    10+10 (20)",         "    10+10 *(20)",
+        "10+10 (20)",             "10+10 *(20)",
         "10/10",                  "10 / (10)",
-        "10*(10)",                "10 * ( 10 ) ",
+        "10*(10)",                "10 * ( 10 )",
         "10",                     "10.10+10.10",
         "10.999",                 "10.789 * ( 10.123 )",
         "10.123+10.123",          "10.",
@@ -150,7 +150,7 @@ test "InfixEquation.fromString" {
         "10-",     "--",
         ".-",      ". -. -",
         null,      "1(",
-        "(",
+        "(",       "      ",
     };
     inline for (test_cases.infix_equations) |case| {
         try testing.expectEqualSlices(u8, case, (try c.InfixEquation.fromString(case, null, allocator)).data);

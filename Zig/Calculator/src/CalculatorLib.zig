@@ -1,5 +1,6 @@
 //! A library for taking in user equations and evaluating them.
 //! TODO:
+//! - Write a proper lexer to reduce size of conversion code
 //! - Add support for multi-character operators
 //!     - Requirements:
 //!         - Allow more than 26 multi-character opererators
@@ -20,17 +21,20 @@ pub const Error = error{
     EmptyInput,
     SequentialOperators,
     EndsWithOperator,
+    StartsWithOperator,
     ParenEndsWithOperator,
     ParenMismatched,
     InvalidFloat,
 };
 
-fn printError(err: anyerror, stdout: std.fs.File.Writer, location: ?[3]usize) !void {
-    const prompt_length = 21;
+fn printError(err: anyerror, stdout: std.fs.File.Writer, location: ?[3]usize, equation: ?[]const u8) !void {
+    // const prompt_length = 21;
     if (location) |l| {
         std.debug.assert(l[1] >= l[0]);
+        std.debug.assert(equation != null);
+        try stdout.print("{?s}\n", .{equation});
         // for (prompt_length) |_| try stdout.print(" ", .{});
-        for (prompt_length + l[0]) |_| try stdout.print("-", .{});
+        for (l[0]) |_| try stdout.print("-", .{});
         for (l[1] - l[0]) |_| try stdout.print("^", .{});
         for (l[2] - l[1]) |_| try stdout.print("-", .{});
         try stdout.print("\n", .{});
@@ -41,6 +45,7 @@ fn printError(err: anyerror, stdout: std.fs.File.Writer, location: ?[3]usize) !v
         Error.EmptyInput => try stdout.print("You cannot have an empty input\n", .{}),
         Error.SequentialOperators => try stdout.print("You cannot enter sequential operators\n", .{}),
         Error.EndsWithOperator => try stdout.print("You cannot finish with an operator\n", .{}),
+        Error.StartsWithOperator => try stdout.print("You cannot start with an operator\n", .{}),
         Error.ParenEndsWithOperator => try stdout.print("You cannot end a parentheses block with an operator\n", .{}),
         Error.ParenMismatched => try stdout.print("Mismatched parentheses!\n", .{}),
         Error.InvalidFloat => try stdout.print("You cannot have more than one period in a floating point number\n", .{}),
@@ -94,51 +99,10 @@ pub fn printResult(result: f64, stdout: std.fs.File.Writer) !void {
 pub const InfixEquation = struct {
     const Self = @This();
 
-    const Result = union(enum) {
-        result: []const u8,
-        err: IError,
-    };
-
-    const IError = union(enum) {
-        InvalidOperator: [3]usize,
-        DivisionByZero,
-        EmptyInput,
-        SequentialOperators: [3]usize,
-        EndsWithOperator: [3]usize,
-        ParenEndsWithOperator: [3]usize,
-        ParenMismatched: [3]usize,
-        InvalidFloat: [3]usize,
-
-        fn toError(self: @This()) Error {
-            return switch (self) {
-                .InvalidOperator => Error.InvalidOperator,
-                .DivisionByZero => Error.DivisionByZero,
-                .EmptyInput => Error.EmptyInput,
-                .SequentialOperators => Error.SequentialOperators,
-                .EndsWithOperator => Error.EndsWithOperator,
-                .ParenEndsWithOperator => Error.ParenEndsWithOperator,
-                .ParenMismatched => Error.ParenMismatched,
-                .InvalidFloat => Error.InvalidFloat,
-            };
-        }
-
-        fn data(self: @This()) ?[3]usize {
-            return switch (self) {
-                .InvalidOperator => |d| d,
-                .DivisionByZero => null,
-                .EmptyInput => null,
-                .SequentialOperators => |d| d,
-                .EndsWithOperator => |d| d,
-                .ParenEndsWithOperator => |d| d,
-                .ParenMismatched => |d| d,
-                .InvalidFloat => |d| d,
-            };
-        }
-    };
-
     data: []const u8,
     stdout: ?std.fs.File.Writer = null,
     allocator: std.mem.Allocator,
+    error_info: ?[3]usize = null,
 
     pub fn init(buffer: []u8, stdout: std.fs.File.Writer, stdin: std.fs.File.Reader, allocator: std.mem.Allocator) !Self {
         while (true) {
@@ -151,20 +115,19 @@ pub const InfixEquation = struct {
     }
 
     pub fn fromString(input: ?[]const u8, stdout: ?std.fs.File.Writer, allocator: std.mem.Allocator) !Self {
-        return Self{
-            .data = switch (try validateInput(input)) {
-                .result => |r| r,
-                .err => |e| switch (e) {
-                    IError.DivisionByZero => unreachable,
-                    else => {
-                        if (stdout) |out| try printError(e.toError(), out, e.data());
-                        return e.toError();
-                    },
-                },
-            },
+        var self = Self{
+            .data = undefined,
             .stdout = stdout,
             .allocator = allocator,
         };
+        validateInput(&self, input) catch |err| switch (err) {
+            Error.DivisionByZero => unreachable,
+            else => {
+                if (stdout) |out| try printError(err, out, self.error_info, self.data);
+                return err;
+            },
+        };
+        return self;
     }
 
     pub fn toPostfixEquation(self: Self) !PostfixEquation {
@@ -184,17 +147,26 @@ pub const InfixEquation = struct {
 
     // Private functions
 
-    fn validateInput(input: ?[]const u8) !Result {
+    fn validateInput(self: *Self, input: ?[]const u8) !void {
         var isOperator = true;
         var isFloat = false;
         var paren_counter: isize = 0;
         var last_op_position: usize = 0;
-        var result: []const u8 = input orelse return Result{ .err = IError.EmptyInput };
+        self.data = input orelse return Error.EmptyInput;
         if (@import("builtin").os.tag == .windows) {
-            result = std.mem.trimRight(u8, result, "\r");
+            self.data = std.mem.trimRight(u8, self.data, "\r");
         }
-        if (result.len == 0) return Result{ .err = IError.EmptyInput };
-        for (result, 0..) |char, i| {
+        self.data = std.mem.trim(u8, self.data, " ");
+        if (self.data.len == 0) return Error.EmptyInput;
+        switch (self.data[0]) {
+            ' ' => unreachable,
+            '0'...'9', 'a', '.', '(', ')', '-' => {},
+            else => {
+                self.error_info = .{ 0, 1, self.data.len };
+                return Error.StartsWithOperator;
+            },
+        }
+        for (self.data, 0..) |char, i| {
             switch (char) {
                 ' ' => continue,
                 '0'...'9', 'a' => {
@@ -202,7 +174,8 @@ pub const InfixEquation = struct {
                 },
                 '.' => {
                     if (isFloat) {
-                        return Result{ .err = .{ .InvalidFloat = .{ last_op_position, i + 1, result.len } } };
+                        self.error_info = .{ last_op_position, i + 1, self.data.len };
+                        return Error.InvalidFloat;
                     }
                     isFloat = true;
                     isOperator = false;
@@ -217,11 +190,13 @@ pub const InfixEquation = struct {
                 ')' => {
                     paren_counter -= 1;
                     if (paren_counter < 0) {
-                        return Result{ .err = IError{ .ParenMismatched = .{ i, i + 1, result.len } } };
+                        self.error_info = .{ last_op_position, i + 1, self.data.len };
+                        return Error.ParenMismatched;
                     }
                     isFloat = false;
                     if (isOperator) {
-                        return Result{ .err = IError{ .ParenEndsWithOperator = .{ last_op_position, i + 1, result.len } } };
+                        self.error_info = .{ last_op_position, i + 1, self.data.len };
+                        return Error.ParenEndsWithOperator;
                     }
                     last_op_position = i;
                 },
@@ -229,7 +204,8 @@ pub const InfixEquation = struct {
                     const operator = @as(Operator, @enumFromInt(char));
                     _ = try operator.precedence();
                     if (isOperator and operator != Operator.subtraction) {
-                        return Result{ .err = IError{ .SequentialOperators = .{ last_op_position, i + 1, result.len } } };
+                        self.error_info = .{ last_op_position, i + 1, self.data.len };
+                        return Error.SequentialOperators;
                     }
                     isOperator = true;
                     isFloat = false;
@@ -238,12 +214,13 @@ pub const InfixEquation = struct {
             }
         }
         if (paren_counter > 0) {
-            return Result{ .err = IError{ .ParenMismatched = .{ last_op_position, last_op_position + 1, result.len } } };
+            self.error_info = .{ last_op_position, last_op_position + 1, self.data.len };
+            return Error.ParenMismatched;
         }
         if (isOperator) {
-            return Result{ .err = IError{ .EndsWithOperator = .{ last_op_position, last_op_position + 1, result.len } } };
+            self.error_info = .{ last_op_position, last_op_position + 1, self.data.len };
+            return Error.EndsWithOperator;
         }
-        return Result{ .result = result };
     }
 };
 
@@ -285,7 +262,7 @@ pub const PostfixEquation = struct {
                     } else |err| {
                         switch (err) {
                             Error.DivisionByZero => {
-                                if (self.stdout) |out| try printError(err, out, null);
+                                if (self.stdout) |out| try printError(err, out, null, null);
                                 return err;
                             },
                             else => unreachable,

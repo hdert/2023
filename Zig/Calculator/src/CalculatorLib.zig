@@ -17,6 +17,7 @@ comptime {
 
 pub const Error = error{
     InvalidOperator,
+    InvalidKeyword,
     DivisionByZero,
     EmptyInput,
     SequentialOperators,
@@ -43,6 +44,7 @@ fn printError(err: anyerror, stdout: std.fs.File.Writer, location: ?[3]usize, eq
     }
     switch (err) {
         Error.InvalidOperator => try stdout.print("You have entered an invalid operator\n", .{}),
+        Error.InvalidKeyword => try stdout.print("You have entered an invalid keyword\n", .{}),
         Error.DivisionByZero => try stdout.print("Cannot divide by zero\n", .{}),
         Error.EmptyInput => try stdout.print("You cannot have an empty input\n", .{}),
         Error.SequentialOperators => try stdout.print("You cannot enter sequential operators\n", .{}),
@@ -170,109 +172,48 @@ pub const InfixEquation = struct {
         var paren_counter: isize = 0;
         while (true) {
             const token = tokens.next();
-            try switch (state) {
-                .start => switch (token.tag) {
-                    .invalid_float => return Error.InvalidFloat,
-                    .invalid => return Error.InvalidOperator,
-                    .eol => return Error.EmptyInput,
-                    .operator => return Error.StartsWithOperator,
-                    .float => state = .float,
-                    .minus => state = .minus,
-                    .left_paren => {
-                        state = .paren;
-                        paren_counter += 1;
-                    },
-                    .right_paren => return Error.ParenMismatched,
-                    .keyword => {
-                        if (token.slice[0] != 'a') {
-                            return Error.InvalidOperator;
-                        }
-                        state = .keyword;
-                    },
+            switch (token.tag) {
+                .invalid_float => return Error.InvalidFloat,
+                .invalid => return Error.InvalidKeyword,
+                .eol => switch (state) {
+                    .start => return Error.EmptyInput,
+                    .operator, .paren, .minus => return Error.EndsWithOperator,
+                    .float, .keyword => break,
                 },
-                .float => switch (token.tag) {
-                    .invalid_float => return Error.InvalidFloat,
-                    .invalid => return Error.InvalidOperator,
-                    .eol => break,
-                    .operator => state = .operator,
-                    .float => continue,
-                    .minus => state = .operator,
-                    .left_paren => {
-                        state = .paren;
-                        paren_counter += 1;
-                    },
-                    .right_paren => {
+                .operator => switch (state) {
+                    .start => return Error.StartsWithOperator,
+                    .operator, .minus => return Error.SequentialOperators,
+                    .paren => return Error.ParenStartsWithOperator,
+                    .float, .keyword => state = .operator,
+                },
+                .float => state = .float,
+                .minus => switch (state) {
+                    .start, .operator, .paren, .minus => state = .minus,
+                    .float, .keyword => state = .minus,
+                },
+                .left_paren => {
+                    paren_counter += 1;
+                    state = .paren;
+                },
+                .right_paren => switch (state) {
+                    .start => return Error.ParenMismatched,
+                    .operator, .minus => return Error.ParenEndsWithOperator,
+                    .paren => return Error.ParenEmptyInput,
+                    .float, .keyword => {
                         paren_counter -= 1;
                         if (paren_counter < 0) {
                             return Error.ParenMismatched;
                         }
                         state = .float;
                     },
-                    .keyword => state = .keyword,
                 },
-                .keyword => switch (token.tag) {
-                    .invalid_float => return Error.InvalidFloat,
-                    .invalid => return Error.InvalidOperator,
-                    .eol => break,
-                    .operator => state = .operator,
-                    .float => state = .float,
-                    .minus => state = .operator,
-                    .left_paren => {
-                        state = .paren;
-                        paren_counter += 1;
-                    },
-                    .right_paren => {
-                        paren_counter -= 1;
-                        if (paren_counter < 0) {
-                            return Error.ParenMismatched;
-                        }
-                        state = .float;
-                    },
-                    .keyword => continue,
+                .keyword => {
+                    if (token.slice.len != 1 or token.slice[0] != 'a') {
+                        return Error.InvalidKeyword;
+                    }
+                    state = .keyword;
                 },
-                .operator => switch (token.tag) {
-                    .invalid_float => return Error.InvalidFloat,
-                    .invalid => return Error.InvalidOperator,
-                    .eol => return Error.EndsWithOperator,
-                    .operator => Error.SequentialOperators,
-                    .float => state = .float,
-                    .minus => state = .minus,
-                    .left_paren => {
-                        state = .paren;
-                        paren_counter += 1;
-                    },
-                    .right_paren => return Error.ParenEndsWithOperator,
-                    .keyword => state = .keyword,
-                },
-                .paren => switch (token.tag) {
-                    .invalid_float => return Error.InvalidFloat,
-                    .invalid => return Error.InvalidOperator,
-                    .eol => return Error.EndsWithOperator,
-                    .operator => Error.ParenStartsWithOperator,
-                    .float => state = .float,
-                    .minus => state = .minus,
-                    .left_paren => {
-                        paren_counter += 1;
-                        continue;
-                    },
-                    .right_paren => return Error.ParenEmptyInput,
-                    .keyword => state = .keyword,
-                },
-                .minus => switch (token.tag) {
-                    .invalid_float => return Error.InvalidFloat,
-                    .invalid => return Error.InvalidOperator,
-                    .eol => return Error.EndsWithOperator,
-                    .operator => return Error.SequentialOperators,
-                    .float => state = .float,
-                    .minus => continue,
-                    .left_paren => {
-                        state = .paren;
-                        paren_counter += 1;
-                    },
-                    .right_paren => return Error.ParenEndsWithOperator,
-                    .keyword => state = .keyword,
-                },
-            };
+            }
         }
         if (paren_counter > 0) {
             return Error.ParenMismatched;

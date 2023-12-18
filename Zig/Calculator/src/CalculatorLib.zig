@@ -1,12 +1,15 @@
 //! A library for taking in user equations and evaluating them.
 //! TODO:
-//! - Write a proper lexer to reduce size of conversion code
+//! - Add back support for user error diagnostics
 //! - Add support for multi-character operators
 //!     - Requirements:
 //!         - Allow more than 26 multi-character opererators
-//!             - I.e. Don't implement as a one char lookup table
+//!             - I.e. Don't implement as a char lookup table
 //!         - Use a modifiable lookup table for next feature
 //! - Add support for arbitrary functions that can be passed in by the caller.
+//!     - Allow them to have a chosen amount of arguments (between zero and inf)
+//!     - Allow them to take an array of arguments
+//! - Merge InfixEquation and PostfixEquation into one Equation struct
 
 const std = @import("std");
 const Stack = @import("Stack");

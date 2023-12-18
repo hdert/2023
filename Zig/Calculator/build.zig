@@ -64,6 +64,13 @@ pub fn build(b: *std.Build) !void {
     });
     const coverage = b.option(bool, "test-coverage", "Generate test coverage");
     if (coverage) |_| {
+        // Currently doesn't work https://github.com/ziglang/zig/issues/17756
+        // Workaround:
+        // rm -r zig-cache
+        // rm -r kcov-output
+        // zig build test
+        // kcov --exclude-path=/usr/lib/zig/lib/,src/CalculatorLibTests.zig,../Stack/src/ kcov-output zig-cache/o/*/test
+        // open kcov-output/index.html
         lib_unit_tests.setExecCmd(&[_]?[]const u8{
             "kcov",
             "kcov-output",

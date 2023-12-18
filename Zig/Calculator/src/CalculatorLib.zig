@@ -22,6 +22,8 @@ pub const Error = error{
     SequentialOperators,
     EndsWithOperator,
     StartsWithOperator,
+    ParenEmptyInput,
+    ParenStartsWithOperator,
     ParenEndsWithOperator,
     ParenMismatched,
     InvalidFloat,
@@ -46,6 +48,8 @@ fn printError(err: anyerror, stdout: std.fs.File.Writer, location: ?[3]usize, eq
         Error.SequentialOperators => try stdout.print("You cannot enter sequential operators\n", .{}),
         Error.EndsWithOperator => try stdout.print("You cannot finish with an operator\n", .{}),
         Error.StartsWithOperator => try stdout.print("You cannot start with an operator\n", .{}),
+        Error.ParenEmptyInput => try stdout.print("You cannot have an empty parenthesis block\n", .{}),
+        Error.ParenStartsWithOperator => try stdout.print("You cannot start a parentheses block with an operator\n", .{}),
         Error.ParenEndsWithOperator => try stdout.print("You cannot end a parentheses block with an operator\n", .{}),
         Error.ParenMismatched => try stdout.print("Mismatched parentheses!\n", .{}),
         Error.InvalidFloat => try stdout.print("You cannot have more than one period in a floating point number\n", .{}),
@@ -123,7 +127,7 @@ pub const InfixEquation = struct {
         validateInput(&self, input) catch |err| switch (err) {
             Error.DivisionByZero => unreachable,
             else => {
-                if (stdout) |out| try printError(err, out, self.error_info, self.data);
+                if (stdout) |out| try printError(err, out, null, null);
                 return err;
             },
         };
@@ -148,80 +152,248 @@ pub const InfixEquation = struct {
     // Private functions
 
     fn validateInput(self: *Self, input: ?[]const u8) !void {
-        var isOperator = true;
-        var isFloat = false;
-        var paren_counter: isize = 0;
-        var last_op_position: usize = 0;
         self.data = input orelse return Error.EmptyInput;
         if (@import("builtin").os.tag == .windows) {
             self.data = std.mem.trimRight(u8, self.data, "\r");
         }
         self.data = std.mem.trim(u8, self.data, " ");
-        if (self.data.len == 0) return Error.EmptyInput;
-        switch (self.data[0]) {
-            ' ' => unreachable,
-            '0'...'9', 'a', '.', '(', ')', '-' => {},
-            else => {
-                self.error_info = .{ 0, 1, self.data.len };
-                return Error.StartsWithOperator;
-            },
-        }
-        for (self.data, 0..) |char, i| {
-            switch (char) {
-                ' ' => continue,
-                '0'...'9', 'a' => {
-                    isOperator = false;
+        var tokens = Tokenizer.init(self.data);
+        const State = enum {
+            float,
+            start,
+            keyword,
+            operator,
+            paren,
+            minus,
+        };
+        var state = State.start;
+        var paren_counter: isize = 0;
+        while (true) {
+            const token = tokens.next();
+            try switch (state) {
+                .start => switch (token.tag) {
+                    .invalid_float => return Error.InvalidFloat,
+                    .invalid => return Error.InvalidOperator,
+                    .eol => return Error.EmptyInput,
+                    .operator => return Error.StartsWithOperator,
+                    .float => state = .float,
+                    .minus => state = .minus,
+                    .left_paren => {
+                        state = .paren;
+                        paren_counter += 1;
+                    },
+                    .right_paren => return Error.ParenMismatched,
+                    .keyword => {
+                        if (token.slice[0] != 'a') {
+                            return Error.InvalidOperator;
+                        }
+                        state = .keyword;
+                    },
                 },
-                '.' => {
-                    if (isFloat) {
-                        self.error_info = .{ last_op_position, i + 1, self.data.len };
-                        return Error.InvalidFloat;
-                    }
-                    isFloat = true;
-                    isOperator = false;
-                    last_op_position = i;
+                .float => switch (token.tag) {
+                    .invalid_float => return Error.InvalidFloat,
+                    .invalid => return Error.InvalidOperator,
+                    .eol => break,
+                    .operator => state = .operator,
+                    .float => continue,
+                    .minus => state = .operator,
+                    .left_paren => {
+                        state = .paren;
+                        paren_counter += 1;
+                    },
+                    .right_paren => {
+                        paren_counter -= 1;
+                        if (paren_counter < 0) {
+                            return Error.ParenMismatched;
+                        }
+                        state = .float;
+                    },
+                    .keyword => state = .keyword,
                 },
-                '(' => {
-                    isOperator = true;
-                    isFloat = false;
-                    paren_counter += 1;
-                    last_op_position = i;
+                .keyword => switch (token.tag) {
+                    .invalid_float => return Error.InvalidFloat,
+                    .invalid => return Error.InvalidOperator,
+                    .eol => break,
+                    .operator => state = .operator,
+                    .float => state = .float,
+                    .minus => state = .operator,
+                    .left_paren => {
+                        state = .paren;
+                        paren_counter += 1;
+                    },
+                    .right_paren => {
+                        paren_counter -= 1;
+                        if (paren_counter < 0) {
+                            return Error.ParenMismatched;
+                        }
+                        state = .float;
+                    },
+                    .keyword => continue,
                 },
-                ')' => {
-                    paren_counter -= 1;
-                    if (paren_counter < 0) {
-                        self.error_info = .{ last_op_position, i + 1, self.data.len };
-                        return Error.ParenMismatched;
-                    }
-                    isFloat = false;
-                    if (isOperator) {
-                        self.error_info = .{ last_op_position, i + 1, self.data.len };
-                        return Error.ParenEndsWithOperator;
-                    }
-                    last_op_position = i;
+                .operator => switch (token.tag) {
+                    .invalid_float => return Error.InvalidFloat,
+                    .invalid => return Error.InvalidOperator,
+                    .eol => return Error.EndsWithOperator,
+                    .operator => Error.SequentialOperators,
+                    .float => state = .float,
+                    .minus => state = .minus,
+                    .left_paren => {
+                        state = .paren;
+                        paren_counter += 1;
+                    },
+                    .right_paren => return Error.ParenEndsWithOperator,
+                    .keyword => state = .keyword,
                 },
-                else => {
-                    const operator = @as(Operator, @enumFromInt(char));
-                    _ = try operator.precedence();
-                    if (isOperator and operator != Operator.subtraction) {
-                        self.error_info = .{ last_op_position, i + 1, self.data.len };
-                        return Error.SequentialOperators;
-                    }
-                    isOperator = true;
-                    isFloat = false;
-                    last_op_position = i;
+                .paren => switch (token.tag) {
+                    .invalid_float => return Error.InvalidFloat,
+                    .invalid => return Error.InvalidOperator,
+                    .eol => return Error.EndsWithOperator,
+                    .operator => Error.ParenStartsWithOperator,
+                    .float => state = .float,
+                    .minus => state = .minus,
+                    .left_paren => {
+                        paren_counter += 1;
+                        continue;
+                    },
+                    .right_paren => return Error.ParenEmptyInput,
+                    .keyword => state = .keyword,
                 },
-            }
+                .minus => switch (token.tag) {
+                    .invalid_float => return Error.InvalidFloat,
+                    .invalid => return Error.InvalidOperator,
+                    .eol => return Error.EndsWithOperator,
+                    .operator => return Error.SequentialOperators,
+                    .float => state = .float,
+                    .minus => continue,
+                    .left_paren => {
+                        state = .paren;
+                        paren_counter += 1;
+                    },
+                    .right_paren => return Error.ParenEndsWithOperator,
+                    .keyword => state = .keyword,
+                },
+            };
         }
         if (paren_counter > 0) {
-            self.error_info = .{ last_op_position, last_op_position + 1, self.data.len };
             return Error.ParenMismatched;
         }
-        if (isOperator) {
-            self.error_info = .{ last_op_position, last_op_position + 1, self.data.len };
+        if (state == .operator) {
             return Error.EndsWithOperator;
         }
     }
+
+    /// Takes Self, returns allocated tokens.
+    const Tokenizer = struct {
+        buffer: []const u8,
+        index: usize,
+
+        const State = enum {
+            float,
+            float_decimals,
+            keyword,
+            start,
+        };
+
+        fn init(buffer: []const u8) Tokenizer {
+            return Tokenizer{
+                .buffer = buffer,
+                .index = 0,
+            };
+        }
+
+        pub fn next(self: *Tokenizer) Token {
+            var result = Token{
+                .slice = undefined,
+                .tag = .eol,
+            };
+            var start = self.index;
+            var state = State.start;
+            while (self.index < self.buffer.len) : (self.index += 1) {
+                const c = self.buffer[self.index];
+                switch (state) {
+                    .start => switch (c) {
+                        ' ' => {
+                            start = self.index + 1;
+                            continue;
+                        },
+                        0, '\n', '\t', '\r' => break,
+                        '0'...'9' => {
+                            state = .float;
+                            result.tag = .float;
+                        },
+                        '.' => {
+                            state = .float_decimals;
+                            result.tag = .float;
+                        },
+                        '+', '/', '*', '^', '%' => {
+                            result.tag = .operator;
+                            self.index += 1;
+                            break;
+                        },
+                        '-' => {
+                            result.tag = .minus;
+                            self.index += 1;
+                            break;
+                        },
+                        '(' => {
+                            result.tag = .left_paren;
+                            self.index += 1;
+                            break;
+                        },
+                        ')' => {
+                            result.tag = .right_paren;
+                            self.index += 1;
+                            break;
+                        },
+                        'a'...'z', 'A'...'Z' => {
+                            result.tag = .keyword;
+                            state = .keyword;
+                        },
+                        else => {
+                            result.tag = .invalid;
+                            break;
+                        },
+                    },
+                    .float => switch (c) {
+                        '0'...'9' => continue,
+                        '.' => state = .float_decimals,
+                        else => break,
+                    },
+                    .float_decimals => switch (c) {
+                        '0'...'9' => continue,
+                        '.' => {
+                            result.tag = .invalid_float;
+                            break;
+                        },
+                        else => break,
+                    },
+                    .keyword => switch (c) {
+                        'a'...'z', 'A'...'Z', '_' => continue,
+                        else => break,
+                    },
+                }
+            }
+            result.slice = self.buffer[start..self.index];
+            return result;
+        }
+    };
+
+    const Token = struct {
+        slice: []const u8,
+        tag: Tag,
+
+        const Tag = enum {
+            float,
+            invalid_float,
+            operator,
+            left_paren,
+            right_paren,
+            minus,
+            keyword,
+            eol,
+            invalid,
+        };
+    };
 };
 
 pub const PostfixEquation = struct {

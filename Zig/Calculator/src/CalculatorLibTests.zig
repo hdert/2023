@@ -139,26 +139,47 @@ const test_cases: testData = .{
 };
 
 test "InfixEquation.fromString" {
-    const fail_cases = .{
-        "10++10",  "10(*10)",
-        "10(10*)", "10*",
-        "10(10)*", "()",
-        "10()",    "21 + 2 ) * ( 5 / 6",
-        "10.789.", "10.789.123",
-        "10..",    "",
-        "-",       "-0.-",
-        "10-",     "--",
-        ".-",      ". -. -",
-        null,      "1(",
-        "(",       "      ",
+    const fail_cases = [_]?[]const u8{
+        "-",       "10++10",     "10(*10)",
+        "10(10*)", "10*",        "10(10)*",
+        "()",      "10()",       "21 + 2 ) * ( 5 / 6",
+        "10.789.", "10.789.123", "10..",
+        "",        "-",          "-0.-",
+        "10-",     "--",         ".-",
+        ". -. -",  null,         "1(",
+        "(",       "      ",     "()",
+        "(*",
     };
-    inline for (test_cases.infix_equations) |case| {
-        try testing.expectEqualSlices(u8, case, (try c.InfixEquation.fromString(case, null, allocator)).data);
+    for (test_cases.infix_equations, 0..) |case, i| {
+        testing.expectEqualSlices(u8, case, (c.InfixEquation.fromString(case, null, allocator) catch |err| {
+            std.debug.print("\nNumber: {d}", .{i});
+            return err;
+        }).data) catch |err| {
+            std.debug.print("\nNumber: {d}\n", .{i});
+            return err;
+        };
     }
-    inline for (fail_cases) |case| {
+    for (fail_cases, 0..) |case, i| {
         if (c.InfixEquation.fromString(case, null, allocator)) |_| {
+            std.debug.print("\nNumber: {d}\n", .{i});
             return error.NotFail;
-        } else |_| {}
+        } else |err| {
+            switch (err) {
+                c.Error.InvalidOperator,
+                c.Error.DivisionByZero,
+                c.Error.EmptyInput,
+                c.Error.SequentialOperators,
+                c.Error.EndsWithOperator,
+                c.Error.StartsWithOperator,
+                c.Error.ParenEmptyInput,
+                c.Error.ParenStartsWithOperator,
+                c.Error.ParenEndsWithOperator,
+                c.Error.ParenMismatched,
+                c.Error.InvalidFloat,
+                => continue,
+                else => return error.InvalidError,
+            }
+        }
     }
 }
 

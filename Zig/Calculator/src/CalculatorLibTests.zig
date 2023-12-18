@@ -144,6 +144,7 @@ test "InfixEquation.fromString" {
         "(",       "      ",     "()",
         "(*",      "asdf",       "aa",
         "aa a",    "a aa",       "aaa",
+        "10-*10",
     };
     for (test_cases.infix_equations, 0..) |case, i| {
         testing.expectEqualSlices(u8, case, (c.InfixEquation.fromString(case, null, allocator) catch |err| {

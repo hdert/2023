@@ -189,7 +189,7 @@ pub const InfixEquation = struct {
                 .float => state = .float,
                 .minus => switch (state) {
                     .start, .operator, .paren, .minus => state = .minus,
-                    .float, .keyword => state = .minus,
+                    .float, .keyword => state = .operator,
                 },
                 .left_paren => {
                     paren_counter += 1;
@@ -406,76 +406,75 @@ pub const PostfixEquation = struct {
     fn infixToPostfix(equation: InfixEquation) ![]u8 {
         var stack = Stack.Stack(Operator).init(equation.allocator);
         defer stack.free();
-        var isNumber = false;
-        var wasNumber = false;
-        var isNegative = false;
         var output = std.ArrayList(u8).init(equation.allocator);
         defer output.deinit();
-        for (equation.data) |char| {
-            std.debug.assert(if (!isNumber) !wasNumber else true);
-            std.debug.assert(!(isNegative and isNumber));
-            switch (char) {
-                ' ' => wasNumber = isNumber,
-                '0'...'9', '.' => {
-                    if (wasNumber) {
-                        try addOperatorToStack(&stack, .multiplication, &output);
+        var tokens = InfixEquation.Tokenizer.init(equation.data);
+        const State = enum { none, negative, float };
+        var state = State.none;
+        while (true) {
+            const token = tokens.next();
+            switch (token.tag) {
+                .eol => break,
+                .float => {
+                    switch (state) {
+                        .none => {},
+                        .negative => try output.append('-'),
+                        .float => {
+                            try addOperatorToStack(&stack, .multiplication, &output);
+                        },
                     }
-                    if (isNegative) {
-                        try output.append('-');
-                    }
-                    if (char == '.' and (!isNumber or wasNumber)) {
+                    if (token.slice[0] == '.') {
                         try output.append('0');
                     }
-                    isNumber = true;
-                    wasNumber = false;
-                    isNegative = false;
-                    try output.append(char);
+                    state = .float;
+                    try output.appendSlice(token.slice);
                 },
-                'a' => {
-                    if (isNegative) {
-                        try output.append('-');
-                    } else if (isNumber) {
-                        try addOperatorToStack(&stack, .multiplication, &output);
+                .keyword => {
+                    switch (state) {
+                        .none => {},
+                        .negative => try output.append('-'),
+                        .float => {
+                            try addOperatorToStack(&stack, .multiplication, &output);
+                        },
                     }
-                    try output.append(char);
-                    isNumber = true;
-                    wasNumber = true;
-                    isNegative = false;
+                    state = .float;
+                    try output.appendSlice(token.slice);
                 },
-                '(' => {
-                    if (isNegative) {
-                        try output.appendSlice("-1");
-                        try addOperatorToStack(&stack, .multiplication, &output);
-                    } else if (isNumber) {
-                        isNumber = false;
-                        wasNumber = false;
-                        try addOperatorToStack(&stack, .multiplication, &output);
+                .minus => switch (state) {
+                    .none => state = .negative,
+                    .negative => state = .none,
+                    .float => {
+                        state = .none;
+                        try addOperatorToStack(&stack, .subtraction, &output);
+                    },
+                },
+                .left_paren => {
+                    switch (state) {
+                        .none => {},
+                        .negative => {
+                            try output.appendSlice("-1");
+                            try addOperatorToStack(&stack, .multiplication, &output);
+                        },
+                        .float => {
+                            try addOperatorToStack(&stack, .multiplication, &output);
+                        },
                     }
+                    state = .none;
                     try stack.push(.left_paren);
-                    isNegative = false;
                 },
-                ')' => {
-                    // Invariant that isNumber == true upheld as we are guarenteed the parenthesis section ends with a number
-                    std.debug.assert(isNumber == true);
-                    std.debug.assert(isNegative == false);
-                    wasNumber = true;
+                .right_paren => {
                     while (stack.peek() != Operator.left_paren) {
                         try output.append(' ');
                         try output.append(@intFromEnum(stack.pop()));
                     }
                     _ = stack.pop();
+                    state = .float;
                 },
-                else => {
-                    if (!isNumber) {
-                        // We are guarenteed that char is subtraction by the validateInput function.
-                        std.debug.assert(char == '-');
-                        isNegative = !isNegative; // Deal with multiple negatives
-                    } else {
-                        try addOperatorToStack(&stack, @enumFromInt(char), &output);
-                        isNumber = false;
-                        wasNumber = false;
-                    }
+                .operator => {
+                    try addOperatorToStack(&stack, @enumFromInt(token.slice[0]), &output);
+                    state = .none;
                 },
+                else => unreachable,
             }
         }
         while (stack.len() > 0) {

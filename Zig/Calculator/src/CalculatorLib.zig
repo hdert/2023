@@ -1,6 +1,5 @@
 //! A library for taking in user equations and evaluating them.
 //! TODO:
-//! - Add back support for user error diagnostics
 //! - Add support for multi-character operators
 //!     - Requirements:
 //!         - Allow more than 26 multi-character opererators
@@ -34,16 +33,19 @@ pub const Error = error{
 };
 
 fn printError(err: anyerror, stdout: std.fs.File.Writer, location: ?[3]usize, equation: ?[]const u8) !void {
-    // const prompt_length = 21;
     if (location) |l| {
-        std.debug.assert(l[1] >= l[0]);
-        std.debug.assert(equation != null);
-        try stdout.print("{?s}\n", .{equation});
-        // for (prompt_length) |_| try stdout.print(" ", .{});
-        for (l[0]) |_| try stdout.print("-", .{});
-        for (l[1] - l[0]) |_| try stdout.print("^", .{});
-        for (l[2] - l[1]) |_| try stdout.print("-", .{});
-        try stdout.print("\n", .{});
+        switch (err) {
+            Error.DivisionByZero, Error.EmptyInput => {},
+            else => {
+                std.debug.assert(l[1] >= l[0]);
+                std.debug.assert(equation != null);
+                try stdout.print("{?s}\n", .{equation});
+                for (l[0]) |_| try stdout.print("-", .{});
+                for (l[1] - l[0]) |_| try stdout.print("^", .{});
+                for (l[2] - l[1]) |_| try stdout.print("-", .{});
+                try stdout.print("\n", .{});
+            },
+        }
     }
     switch (err) {
         Error.InvalidOperator => try stdout.print("You have entered an invalid operator\n", .{}),
@@ -132,7 +134,7 @@ pub const InfixEquation = struct {
         validateInput(&self, input) catch |err| switch (err) {
             Error.DivisionByZero => unreachable,
             else => {
-                if (stdout) |out| try printError(err, out, null, null);
+                if (stdout) |out| try printError(err, out, self.error_info, self.data);
                 return err;
             },
         };
@@ -173,14 +175,19 @@ pub const InfixEquation = struct {
         };
         var state = State.start;
         var paren_counter: isize = 0;
+        var old_error_info: ?[3]usize = null;
         while (true) {
             const token = tokens.next();
+            self.error_info = .{ token.start, token.end, self.data.len };
             switch (token.tag) {
                 .invalid_float => return Error.InvalidFloat,
                 .invalid => return Error.InvalidKeyword,
                 .eol => switch (state) {
                     .start => return Error.EmptyInput,
-                    .operator, .paren, .minus => return Error.EndsWithOperator,
+                    .operator, .paren, .minus => {
+                        self.error_info = old_error_info;
+                        return Error.EndsWithOperator;
+                    }, // no
                     .float, .keyword => break,
                 },
                 .operator => switch (state) {
@@ -200,7 +207,10 @@ pub const InfixEquation = struct {
                 },
                 .right_paren => switch (state) {
                     .start => return Error.ParenMismatched,
-                    .operator, .minus => return Error.ParenEndsWithOperator,
+                    .operator, .minus => {
+                        self.error_info = old_error_info;
+                        return Error.ParenEndsWithOperator;
+                    },
                     .paren => return Error.ParenEmptyInput,
                     .float, .keyword => {
                         paren_counter -= 1;
@@ -217,16 +227,18 @@ pub const InfixEquation = struct {
                     state = .keyword;
                 },
             }
+            old_error_info = .{ token.start, token.end, self.data.len };
         }
         if (paren_counter > 0) {
+            self.error_info = old_error_info;
             return Error.ParenMismatched;
         }
         if (state == .operator) {
+            self.error_info = old_error_info;
             return Error.EndsWithOperator;
         }
     }
 
-    /// Takes Self, returns allocated tokens.
     const Tokenizer = struct {
         buffer: []const u8,
         index: usize,
@@ -245,19 +257,19 @@ pub const InfixEquation = struct {
             };
         }
 
+        /// Takes Self, returns Token.
         pub fn next(self: *Tokenizer) Token {
             var result = Token{
-                .slice = undefined,
                 .tag = .eol,
             };
-            var start = self.index;
+            result.start = self.index;
             var state = State.start;
             while (self.index < self.buffer.len) : (self.index += 1) {
                 const c = self.buffer[self.index];
                 switch (state) {
                     .start => switch (c) {
                         ' ' => {
-                            start = self.index + 1;
+                            result.start = self.index + 1;
                             continue;
                         },
                         0, '\n', '\t', '\r' => break,
@@ -306,6 +318,7 @@ pub const InfixEquation = struct {
                     .float_decimals => switch (c) {
                         '0'...'9' => continue,
                         '.' => {
+                            self.index += 1;
                             result.tag = .invalid_float;
                             break;
                         },
@@ -317,13 +330,16 @@ pub const InfixEquation = struct {
                     },
                 }
             }
-            result.slice = self.buffer[start..self.index];
+            result.slice = self.buffer[result.start..self.index];
+            result.end = self.index;
             return result;
         }
     };
 
     const Token = struct {
-        slice: []const u8,
+        slice: []const u8 = undefined,
+        start: usize = undefined,
+        end: usize = undefined,
         tag: Tag,
 
         const Tag = enum {

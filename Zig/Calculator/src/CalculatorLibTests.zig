@@ -149,13 +149,11 @@ test "InfixEquation.fromString" {
         "æ",
     };
     for (test_cases.infix_equations, 0..) |case, i| {
-        testing.expectEqualSlices(u8, case, (c.InfixEquation.fromString(case, null, allocator) catch |err| {
+        const result = c.InfixEquation.fromString(case, null, allocator) catch |err| {
             std.debug.print("\nNumber: {d}", .{i});
             return err;
-        }).data) catch |err| {
-            std.debug.print("\nNumber: {d}\n", .{i});
-            return err;
         };
+        try testing.expectEqualSlices(u8, case, result.data);
     }
     for (fail_cases, 0..) |case, i| {
         if (c.InfixEquation.fromString(case, null, allocator)) |_| {
@@ -199,7 +197,11 @@ test "PostfixEquation.fromInfixEquation" {
 }
 
 test "InfixEquation.evaluate" {
-    for (test_cases.infix_equations, test_cases.inputs, test_cases.results) |infix, input, result| {
+    for (
+        test_cases.infix_equations,
+        test_cases.inputs,
+        test_cases.results,
+    ) |infix, input, result| {
         const infix_equation = c.InfixEquation{
             .data = infix,
             .allocator = allocator,
@@ -230,7 +232,11 @@ test "PostfixEquation.evaluate" {
         0, 0,
         0,
     };
-    for (test_cases.postfix_equations, test_cases.inputs, test_cases.results) |postfix, input, result| {
+    for (
+        test_cases.postfix_equations,
+        test_cases.inputs,
+        test_cases.results,
+    ) |postfix, input, result| {
         const postfix_equation = c.PostfixEquation{
             .data = postfix,
             .allocator = allocator,

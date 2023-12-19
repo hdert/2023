@@ -12,6 +12,7 @@
 //! - Add support for arbitrary functions that can be passed in by the caller.
 //!     - Allow them to have a chosen amount of arguments (between zero and inf)
 //!     - Allow them to take an array of arguments
+//! - Create tests for Tokenizer
 
 const std = @import("std");
 const Stack = @import("Stack");
@@ -255,10 +256,6 @@ pub const InfixEquation = struct {
         if (paren_counter > 0) {
             self.error_info = old_error_info;
             return Error.ParenMismatched;
-        }
-        if (state == .operator) {
-            self.error_info = old_error_info;
-            return Error.EndsWithOperator;
         }
     }
 };

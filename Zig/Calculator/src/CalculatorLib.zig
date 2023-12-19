@@ -1,5 +1,9 @@
 //! A library for taking in user equations and evaluating them.
 //! TODO:
+//! - Merge InfixEquation and PostfixEquation into one Equation struct
+//!     - This needs to done to make the code less awkward for the next part
+//!     - But does it?
+//!     - This has allowed me to keep a stable ABI despite numerous backend changes
 //! - Add support for multi-character operators
 //!     - Requirements:
 //!         - Allow more than 26 multi-character opererators
@@ -8,10 +12,10 @@
 //! - Add support for arbitrary functions that can be passed in by the caller.
 //!     - Allow them to have a chosen amount of arguments (between zero and inf)
 //!     - Allow them to take an array of arguments
-//! - Merge InfixEquation and PostfixEquation into one Equation struct
 
 const std = @import("std");
 const Stack = @import("Stack");
+const Tokenizer = @import("Tokenizer.zig");
 const testing = std.testing;
 comptime {
     _ = @import("CalculatorLibTests.zig");
@@ -32,7 +36,12 @@ pub const Error = error{
     InvalidFloat,
 };
 
-fn printError(err: anyerror, stdout: std.fs.File.Writer, location: ?[3]usize, equation: ?[]const u8) !void {
+fn printError(
+    err: anyerror,
+    stdout: std.fs.File.Writer,
+    location: ?[3]usize,
+    equation: ?[]const u8,
+) !void {
     if (location) |l| {
         switch (err) {
             Error.DivisionByZero, Error.EmptyInput => {},
@@ -115,7 +124,12 @@ pub const InfixEquation = struct {
     allocator: std.mem.Allocator,
     error_info: ?[3]usize = null,
 
-    pub fn init(buffer: []u8, stdout: std.fs.File.Writer, stdin: std.fs.File.Reader, allocator: std.mem.Allocator) !Self {
+    pub fn init(
+        buffer: []u8,
+        stdout: std.fs.File.Writer,
+        stdin: std.fs.File.Reader,
+        allocator: std.mem.Allocator,
+    ) !Self {
         while (true) {
             try stdout.print("Enter your equation: ", .{});
             const user_input = try stdin.readUntilDelimiterOrEof(buffer, '\n');
@@ -125,7 +139,11 @@ pub const InfixEquation = struct {
         }
     }
 
-    pub fn fromString(input: ?[]const u8, stdout: ?std.fs.File.Writer, allocator: std.mem.Allocator) !Self {
+    pub fn fromString(
+        input: ?[]const u8,
+        stdout: ?std.fs.File.Writer,
+        allocator: std.mem.Allocator,
+    ) !Self {
         var self = Self{
             .data = undefined,
             .stdout = stdout,
@@ -134,7 +152,12 @@ pub const InfixEquation = struct {
         validateInput(&self, input) catch |err| switch (err) {
             Error.DivisionByZero => unreachable,
             else => {
-                if (stdout) |out| try printError(err, out, self.error_info, self.data);
+                if (stdout) |out| try printError(
+                    err,
+                    out,
+                    self.error_info,
+                    self.data,
+                );
                 return err;
             },
         };
@@ -187,7 +210,7 @@ pub const InfixEquation = struct {
                     .operator, .paren, .minus => {
                         self.error_info = old_error_info;
                         return Error.EndsWithOperator;
-                    }, // no
+                    },
                     .float, .keyword => break,
                 },
                 .operator => switch (state) {
@@ -238,122 +261,6 @@ pub const InfixEquation = struct {
             return Error.EndsWithOperator;
         }
     }
-
-    const Tokenizer = struct {
-        buffer: []const u8,
-        index: usize,
-
-        const State = enum {
-            float,
-            float_decimals,
-            keyword,
-            start,
-        };
-
-        fn init(buffer: []const u8) Tokenizer {
-            return Tokenizer{
-                .buffer = buffer,
-                .index = 0,
-            };
-        }
-
-        /// Takes Self, returns Token.
-        pub fn next(self: *Tokenizer) Token {
-            var result = Token{
-                .tag = .eol,
-            };
-            result.start = self.index;
-            var state = State.start;
-            while (self.index < self.buffer.len) : (self.index += 1) {
-                const c = self.buffer[self.index];
-                switch (state) {
-                    .start => switch (c) {
-                        ' ' => {
-                            result.start = self.index + 1;
-                            continue;
-                        },
-                        0, '\n', '\t', '\r' => break,
-                        '0'...'9' => {
-                            state = .float;
-                            result.tag = .float;
-                        },
-                        '.' => {
-                            state = .float_decimals;
-                            result.tag = .float;
-                        },
-                        '+', '/', '*', '^', '%' => {
-                            result.tag = .operator;
-                            self.index += 1;
-                            break;
-                        },
-                        '-' => {
-                            result.tag = .minus;
-                            self.index += 1;
-                            break;
-                        },
-                        '(' => {
-                            result.tag = .left_paren;
-                            self.index += 1;
-                            break;
-                        },
-                        ')' => {
-                            result.tag = .right_paren;
-                            self.index += 1;
-                            break;
-                        },
-                        'a'...'z', 'A'...'Z' => {
-                            result.tag = .keyword;
-                            state = .keyword;
-                        },
-                        else => {
-                            result.tag = .invalid;
-                            break;
-                        },
-                    },
-                    .float => switch (c) {
-                        '0'...'9' => continue,
-                        '.' => state = .float_decimals,
-                        else => break,
-                    },
-                    .float_decimals => switch (c) {
-                        '0'...'9' => continue,
-                        '.' => {
-                            self.index += 1;
-                            result.tag = .invalid_float;
-                            break;
-                        },
-                        else => break,
-                    },
-                    .keyword => switch (c) {
-                        'a'...'z', 'A'...'Z', '_' => continue,
-                        else => break,
-                    },
-                }
-            }
-            result.slice = self.buffer[result.start..self.index];
-            result.end = self.index;
-            return result;
-        }
-    };
-
-    const Token = struct {
-        slice: []const u8 = undefined,
-        start: usize = undefined,
-        end: usize = undefined,
-        tag: Tag,
-
-        const Tag = enum {
-            float,
-            invalid_float,
-            operator,
-            left_paren,
-            right_paren,
-            minus,
-            keyword,
-            eol,
-            invalid,
-        };
-    };
 };
 
 pub const PostfixEquation = struct {
@@ -413,7 +320,11 @@ pub const PostfixEquation = struct {
 
     // Private functions
 
-    fn addOperatorToStack(stack: *Stack.Stack(Operator), operator: Operator, output: *std.ArrayList(u8)) !void {
+    fn addOperatorToStack(
+        stack: *Stack.Stack(Operator),
+        operator: Operator,
+        output: *std.ArrayList(u8),
+    ) !void {
         while (stack.len() > 0 and try stack.peek().higherOrEqual(operator)) {
             try output.append(' ');
             try output.append(@intFromEnum(stack.pop()));
@@ -427,7 +338,7 @@ pub const PostfixEquation = struct {
         defer stack.free();
         var output = std.ArrayList(u8).init(equation.allocator);
         defer output.deinit();
-        var tokens = InfixEquation.Tokenizer.init(equation.data);
+        var tokens = Tokenizer.init(equation.data);
         const State = enum { none, negative, float };
         var state = State.none;
         while (true) {
@@ -517,26 +428,8 @@ pub const PostfixEquation = struct {
 };
 
 test "Operator.precedence validity" {
-    const success_cases = .{
-        '+',
-        '-',
-        '/',
-        '*',
-        '^',
-        '%',
-        '(',
-        ')',
-    };
-    const fail_cases = .{
-        'a',
-        '1',
-        '0',
-        'w',
-        '9',
-        '&',
-        '.',
-        'a',
-    };
+    const success_cases = .{ '+', '-', '/', '*', '^', '%', '(', ')' };
+    const fail_cases = .{ 'a', '1', '0', 'w', '9', '&', '.', 'a' };
     inline for (success_cases) |case| {
         _ = try @as(Operator, @enumFromInt(case)).precedence();
     }
@@ -547,47 +440,36 @@ test "Operator.precedence validity" {
 }
 
 test "PostfixEquation.calculate" {
-    const success_cases = .{
-        '+',
-        '-',
-        '/',
-        '*',
-        '^',
-        '%',
-    };
+    const success_cases = .{ '+', '-', '/', '*', '^', '%' };
     const success_case_numbers = [_]comptime_float{
-        10, 10, 20,
-        10, 10, 0,
-        10, 10, 1,
-        10, 10, 100,
-        10, 2,  100,
-        30, 10, 0,
+        10, 10, 20,  10, 10, 0,
+        10, 10, 1,   10, 10, 100,
+        10, 2,  100, 30, 10, 0,
     };
     try testing.expect(success_case_numbers.len % 3 == 0);
     try testing.expect(success_cases.len == success_case_numbers.len / 3);
-    const fail_cases = .{
-        '/',
-        '%',
-        'a',
-        '&',
-        '1',
-    };
+    const fail_cases = .{ '/', '%', 'a', '&', '1' };
 
     const fail_case_numbers = .{
-        10, 0,
-        10, 0,
-        10, 10,
-        10, 10,
-        10, 10,
+        10, 0,  10, 0,  10,
+        10, 10, 10, 10, 10,
     };
     try testing.expect(fail_case_numbers.len % 2 == 0);
     try testing.expect(fail_cases.len == fail_case_numbers.len / 2);
     inline for (0..success_cases.len) |i| {
-        const result = try comptime PostfixEquation.calculate(success_case_numbers[i * 3], success_case_numbers[i * 3 + 1], success_cases[i]);
+        const result = try comptime PostfixEquation.calculate(
+            success_case_numbers[i * 3],
+            success_case_numbers[i * 3 + 1],
+            success_cases[i],
+        );
         try testing.expectEqual(success_case_numbers[i * 3 + 2], result);
     }
     inline for (0..fail_cases.len) |i| {
-        if (PostfixEquation.calculate(fail_case_numbers[i * 2], fail_case_numbers[i * 2 + 1], fail_cases[i])) |_| {
+        if (PostfixEquation.calculate(
+            fail_case_numbers[i * 2],
+            fail_case_numbers[i * 2 + 1],
+            fail_cases[i],
+        )) |_| {
             return error.NotFail;
         } else |_| {}
     }

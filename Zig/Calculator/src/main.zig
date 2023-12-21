@@ -1,5 +1,6 @@
 const std = @import("std");
 const Calculator = @import("CalculatorLib.zig");
+const Io = @import("CalculatorIo.zig");
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
@@ -12,13 +13,18 @@ pub fn main() !void {
 
     try stdout.print("Use the keyword 'a' to substitute the previous answer\n", .{});
     while (true) {
-        const infixEquation = try Calculator.InfixEquation.init(buffer[0..], stdout, stdin, allocator);
+        const infixEquation = try Io.getEquationFromUser(
+            buffer[0..],
+            stdout,
+            stdin,
+            allocator,
+        );
 
         result = infixEquation.evaluate(result) catch |err| switch (err) {
             Calculator.Error.DivisionByZero => continue,
             else => return err,
         };
 
-        try Calculator.printResult(result, stdout);
+        try Io.printResult(result, stdout);
     }
 }

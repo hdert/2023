@@ -146,7 +146,7 @@ test "InfixEquation.fromString" {
         "aa a",    "a aa",       "aaa",
         "10-*10",  "_",          "+",
         ")",       "(",          "(1",
-        "æ",
+        "æ",      ")",          "1)",
     };
     for (test_cases.infix_equations, 0..) |case, i| {
         const result = c.InfixEquation.fromString(case, null, allocator) catch |err| {
@@ -161,18 +161,12 @@ test "InfixEquation.fromString" {
             return error.NotFail;
         } else |err| {
             switch (err) {
-                c.Error.InvalidKeyword,
-                c.Error.EmptyInput,
-                c.Error.SequentialOperators,
-                c.Error.EndsWithOperator,
-                c.Error.StartsWithOperator,
-                c.Error.ParenEmptyInput,
-                c.Error.ParenStartsWithOperator,
-                c.Error.ParenEndsWithOperator,
-                c.Error.ParenMismatched,
-                c.Error.InvalidFloat,
-                => continue,
-                else => return error.InvalidError,
+                c.Error.InvalidOperator,
+                c.Error.DivisionByZero,
+                => return error.UnexpectedError,
+                else => {
+                    if (!c.isError(err)) return error.InvalidError;
+                },
             }
         }
     }

@@ -1,22 +1,44 @@
 //! A library for taking in user equations and evaluating them.
 //! TODO:
-//! - Merge InfixEquation and PostfixEquation into one Equation struct
-//!     - This needs to done to make the code less awkward for the next part
-//!     - But does it?
-//!     - This has allowed me to keep a stable ABI despite numerous backend changes
+//! - Create help and h keywords
+//!     - This is not really a library problem, this is a front-end
+//!     problem.
+//!     - Maybe help could be a special error type?
+//!     - What about wanting to call help on functions?
+//!         - This is probably to big of an ask right now, especially
+//!         if I want to automate it based off of function docstrings.
+//! - Create ans and answer keywords
+//!     - This is also a front-end problem, maybe I could create a
+//!     no input only output function. Almost like a constants function.
+//!     - It'd probably be better to implement this by just passing a number
+//!     to the library
+//!     - But then how'd you implement a help function?
 //! - Add support for multi-character operators
 //!     - Requirements:
 //!         - Allow more than 26 multi-character opererators
 //!             - I.e. Don't implement as a char lookup table
 //!         - Use a modifiable lookup table for next feature
+//!         - These are not allowed to be infix operators
+//!         - These must be for functions only
 //! - Add support for arbitrary functions that can be passed in by the caller.
 //!     - Allow them to have a chosen amount of arguments (between zero and inf)
 //!     - Allow them to take an array of arguments
 //! - Create tests for Tokenizer
+//!     - Depends on whether the code ever changes, and whether
+//!     the public method testing covers it.
+//! - Find way to do performance testing
+//! - Merge InfixEquation and PostfixEquation into one Equation struct
+//!     - This needs to done to make the code less awkward for the next part
+//!     - But does it?
+//!     - This has allowed me to keep a stable ABI despite numerous backend changes
+//!     - I don't think this is necessary, I can just keep copying data
+//! - Move functions that are actually the responsibility of the front-end
+//! to there.
 
 const std = @import("std");
 const Stack = @import("Stack");
 const Tokenizer = @import("Tokenizer.zig");
+const Io = @import("CalculatorIo.zig");
 const testing = std.testing;
 comptime {
     _ = @import("CalculatorLibTests.zig");
@@ -37,41 +59,23 @@ pub const Error = error{
     InvalidFloat,
 };
 
-fn printError(
-    err: anyerror,
-    stdout: std.fs.File.Writer,
-    location: ?[3]usize,
-    equation: ?[]const u8,
-) !void {
-    if (location) |l| {
-        switch (err) {
-            Error.DivisionByZero, Error.EmptyInput => {},
-            else => {
-                std.debug.assert(l[1] >= l[0]);
-                std.debug.assert(equation != null);
-                try stdout.print("{?s}\n", .{equation});
-                for (l[0]) |_| try stdout.print("-", .{});
-                for (l[1] - l[0]) |_| try stdout.print("^", .{});
-                for (l[2] - l[1]) |_| try stdout.print("-", .{});
-                try stdout.print("\n", .{});
-            },
-        }
-    }
-    switch (err) {
-        Error.InvalidOperator => try stdout.print("You have entered an invalid operator\n", .{}),
-        Error.InvalidKeyword => try stdout.print("You have entered an invalid keyword\n", .{}),
-        Error.DivisionByZero => try stdout.print("Cannot divide by zero\n", .{}),
-        Error.EmptyInput => try stdout.print("You cannot have an empty input\n", .{}),
-        Error.SequentialOperators => try stdout.print("You cannot enter sequential operators\n", .{}),
-        Error.EndsWithOperator => try stdout.print("You cannot finish with an operator\n", .{}),
-        Error.StartsWithOperator => try stdout.print("You cannot start with an operator\n", .{}),
-        Error.ParenEmptyInput => try stdout.print("You cannot have an empty parenthesis block\n", .{}),
-        Error.ParenStartsWithOperator => try stdout.print("You cannot start a parentheses block with an operator\n", .{}),
-        Error.ParenEndsWithOperator => try stdout.print("You cannot end a parentheses block with an operator\n", .{}),
-        Error.ParenMismatched => try stdout.print("Mismatched parentheses!\n", .{}),
-        Error.InvalidFloat => try stdout.print("You cannot have more than one period in a floating point number\n", .{}),
-        else => return err,
-    }
+pub fn isError(err: anyerror) bool {
+    return switch (err) {
+        Error.InvalidOperator,
+        Error.InvalidKeyword,
+        Error.DivisionByZero,
+        Error.EmptyInput,
+        Error.SequentialOperators,
+        Error.EndsWithOperator,
+        Error.StartsWithOperator,
+        Error.ParenEmptyInput,
+        Error.ParenStartsWithOperator,
+        Error.ParenEndsWithOperator,
+        Error.ParenMismatched,
+        Error.InvalidFloat,
+        => true,
+        else => false,
+    };
 }
 
 const Operator = enum(u8) {
@@ -106,17 +110,6 @@ const Operator = enum(u8) {
     }
 };
 
-pub fn printResult(result: f64, stdout: std.fs.File.Writer) !void {
-    const abs_result = if (result < 0) -result else result;
-    const small = abs_result < std.math.pow(f64, 10, -9);
-    const big = abs_result > std.math.pow(f64, 10, 9);
-    if (!(big or small) or result == 0) {
-        try stdout.print("The result is {d}\n", .{result});
-    } else {
-        try stdout.print("The result is {e}\n", .{result});
-    }
-}
-
 pub const InfixEquation = struct {
     const Self = @This();
 
@@ -124,21 +117,6 @@ pub const InfixEquation = struct {
     stdout: ?std.fs.File.Writer = null,
     allocator: std.mem.Allocator,
     error_info: ?[3]usize = null,
-
-    pub fn init(
-        buffer: []u8,
-        stdout: std.fs.File.Writer,
-        stdin: std.fs.File.Reader,
-        allocator: std.mem.Allocator,
-    ) !Self {
-        while (true) {
-            try stdout.print("Enter your equation: ", .{});
-            const user_input = try stdin.readUntilDelimiterOrEof(buffer, '\n');
-            if (fromString(user_input, stdout, allocator)) |result| {
-                return result;
-            } else |_| {}
-        }
-    }
 
     pub fn fromString(
         input: ?[]const u8,
@@ -153,7 +131,7 @@ pub const InfixEquation = struct {
         validateInput(&self, input) catch |err| switch (err) {
             Error.DivisionByZero => unreachable,
             else => {
-                if (stdout) |out| try printError(
+                if (stdout) |out| try Io.printError(
                     err,
                     out,
                     self.error_info,
@@ -260,6 +238,7 @@ pub const InfixEquation = struct {
     }
 };
 
+/// Must be freed
 pub const PostfixEquation = struct {
     const Self = @This();
 
@@ -267,6 +246,7 @@ pub const PostfixEquation = struct {
     stdout: ?std.fs.File.Writer = null,
     allocator: std.mem.Allocator,
 
+    /// When created using this method, the resultant struct must be freed
     pub fn fromInfixEquation(equation: InfixEquation) !Self {
         return Self{
             .data = try infixToPostfix(equation),
@@ -298,7 +278,7 @@ pub const PostfixEquation = struct {
                     } else |err| {
                         switch (err) {
                             Error.DivisionByZero => {
-                                if (self.stdout) |out| try printError(err, out, null, null);
+                                if (self.stdout) |out| try Io.printError(err, out, null, null);
                                 return err;
                             },
                             else => unreachable,
@@ -330,6 +310,7 @@ pub const PostfixEquation = struct {
         try stack.push(operator);
     }
 
+    /// Returns string that must be freed
     fn infixToPostfix(equation: InfixEquation) ![]u8 {
         var stack = Stack.Stack(Operator).init(equation.allocator);
         defer stack.free();

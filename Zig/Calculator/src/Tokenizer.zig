@@ -33,6 +33,11 @@ pub fn next(self: *Self) Token {
                     continue;
                 },
                 0, '\n', '\t', '\r' => break,
+                ',' => {
+                    result.tag = .comma;
+                    self.index += 1;
+                    break;
+                },
                 '0'...'9' => {
                     state = .float;
                     result.tag = .float;
@@ -111,5 +116,6 @@ const Token = struct {
         keyword,
         eol,
         invalid,
+        comma,
     };
 };

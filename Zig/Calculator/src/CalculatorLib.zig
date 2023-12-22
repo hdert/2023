@@ -13,6 +13,7 @@
 //!     - It'd probably be better to implement this by just passing a number
 //!     to the library
 //!     - But then how'd you implement a help function?
+//!     - Answer, use a tagged union
 //! - Add support for multi-character operators
 //!     - Requirements:
 //!         - Allow more than 26 multi-character opererators
@@ -56,7 +57,12 @@ pub const Error = error{
     ParenStartsWithOperator,
     ParenEndsWithOperator,
     ParenMismatched,
+    ParenMismatchedClose,
     InvalidFloat,
+    FnUnexpectedArgSize,
+    FnArgBoundsViolated,
+    FnArgInvalid,
+    Comma,
 };
 
 pub fn isError(err: anyerror) bool {
@@ -72,7 +78,12 @@ pub fn isError(err: anyerror) bool {
         Error.ParenStartsWithOperator,
         Error.ParenEndsWithOperator,
         Error.ParenMismatched,
+        Error.ParenMismatchedClose,
         Error.InvalidFloat,
+        Error.FnUnexpectedArgSize,
+        Error.FnArgBoundsViolated,
+        Error.FnArgInvalid,
+        Error.Comma,
         => true,
         else => false,
     };
@@ -110,30 +121,98 @@ const Operator = enum(u8) {
     }
 };
 
+pub const KeywordInfo = union(enum) {
+    const Function = struct {
+        arg_size: usize,
+        ptr: *const fn (f64) Error!f64,
+    };
+
+    Return: anyerror,
+    Functionf64: Function,
+    // FunctionTwoArgf64: *const fn (f64, f64) Error!f64,
+    // We want to provide options for functions that don't have to enforce
+    // parameter length.
+    // FunctionMultif64: *const fn ([]const f64) Error!f64,
+    FunctionString: *const fn ([]const u8) anyerror!f64,
+    Constant: f64,
+};
+
+/// Must be freed due to hashmap
+pub const Equation = struct {
+    const Self = @This();
+
+    // stdout: ?std.fs.File.Writer = null,
+    allocator: std.mem.Allocator,
+    keywords: std.StringHashMap(KeywordInfo),
+
+    pub fn init(
+        // stdout: ?std.fs.File.Writer,
+        allocator: std.mem.Allocator,
+        keys: ?[]const []const u8,
+        values: ?[]const KeywordInfo,
+    ) !Self {
+        var self = Self{
+            // stdout,
+            .allocator = allocator,
+            .keywords = std.StringHashMap(KeywordInfo).init(allocator),
+        };
+        if (keys) |ks|
+            for (ks, values.?) |key, value|
+                try self.keywords.put(key, value);
+        return self;
+    }
+
+    pub fn addKeywords(self: *Self, keys: []const []const u8, values: []const KeywordInfo) !void {
+        for (keys, values) |key, value|
+            try self.keywords.put(key, value);
+    }
+
+    pub fn registerPreviousAnswer(self: *Self, prev_ans: f64) !void {
+        try self.addKeywords(
+            &[_][]const u8{ "a", "ans", "answer" },
+            &[_]KeywordInfo{
+                .{ .Constant = prev_ans },
+                .{ .Constant = prev_ans },
+                .{ .Constant = prev_ans },
+            },
+        );
+    }
+
+    pub fn newInfixEquation(self: Self, input: ?[]const u8, io: ?Io) !InfixEquation {
+        return InfixEquation.fromString(input, self.allocator, self.keywords, io);
+    }
+
+    pub fn free(self: *Self) void {
+        self.keywords.clearAndFree();
+    }
+};
+
 pub const InfixEquation = struct {
     const Self = @This();
 
     data: []const u8,
-    stdout: ?std.fs.File.Writer = null,
+    // stdout: ?std.fs.File.Writer = null,
     allocator: std.mem.Allocator,
+    keywords: std.StringHashMap(KeywordInfo),
     error_info: ?[3]usize = null,
 
     pub fn fromString(
         input: ?[]const u8,
-        stdout: ?std.fs.File.Writer,
         allocator: std.mem.Allocator,
+        keywords: std.StringHashMap(KeywordInfo),
+        io: ?Io,
     ) !Self {
         var self = Self{
             .data = undefined,
-            .stdout = stdout,
+            // .stdout = stdout,
             .allocator = allocator,
+            .keywords = keywords,
         };
         validateInput(&self, input) catch |err| switch (err) {
             Error.DivisionByZero => unreachable,
             else => {
-                if (stdout) |out| try Io.printError(
+                if (io) |i| try i.printError(
                     err,
-                    out,
                     self.error_info,
                     self.data,
                 );
@@ -160,13 +239,41 @@ pub const InfixEquation = struct {
 
     // Private functions
 
-    fn validateInput(self: *Self, input: ?[]const u8) !void {
-        self.data = input orelse return Error.EmptyInput;
-        if (@import("builtin").os.tag == .windows) {
-            self.data = std.mem.trimRight(u8, self.data, "\r");
+    fn validateKeyword(self: *Self, tokens: *Tokenizer, token_slice: []const u8) !void {
+        const keyword = self.keywords.get(token_slice) orelse return Error.InvalidKeyword;
+        var len: usize = 0;
+        var arg_counter: usize = 0;
+        switch (keyword) {
+            .Return => |err| return err,
+            .Functionf64 => |info| len = info.arg_size,
+            .FunctionString => {},
+            .Constant => return,
         }
-        self.data = std.mem.trim(u8, self.data, " ");
-        var tokens = Tokenizer.init(self.data);
+        const token = tokens.next();
+        if (token.tag != .left_paren) {
+            self.error_info = .{ token.start, token.end, self.data.len };
+            return Error.InvalidKeyword;
+        }
+        if (len > 0) {
+            while (true) : (arg_counter += 1)
+                self.validateArgument(tokens) catch |err| switch (err) {
+                    Error.Comma => continue,
+                    Error.ParenMismatchedClose => break,
+                    else => return err,
+                };
+        } else {
+            while (true)
+                switch (tokens.next().tag) {
+                    .right_paren => break,
+                    .eol => return Error.FnUnexpectedArgSize,
+                    else => {},
+                };
+        }
+        if (arg_counter != len)
+            return Error.FnUnexpectedArgSize;
+    }
+
+    fn validateArgument(self: *Self, tokens: *Tokenizer) anyerror!void {
         const State = enum {
             float,
             start,
@@ -191,6 +298,20 @@ pub const InfixEquation = struct {
                         return Error.EndsWithOperator;
                     },
                     .float, .keyword => break,
+                },
+                .comma => switch (state) {
+                    .start => return Error.EmptyInput,
+                    .operator, .paren, .minus => {
+                        self.error_info = old_error_info;
+                        return Error.EndsWithOperator;
+                    },
+                    .float, .keyword => {
+                        if (paren_counter > 0) {
+                            self.error_info = old_error_info;
+                            return Error.ParenMismatched;
+                        }
+                        return Error.Comma;
+                    },
                 },
                 .operator => switch (state) {
                     .start => return Error.StartsWithOperator,
@@ -217,16 +338,18 @@ pub const InfixEquation = struct {
                     .float, .keyword => {
                         paren_counter -= 1;
                         if (paren_counter < 0) {
-                            return Error.ParenMismatched;
+                            return Error.ParenMismatchedClose;
                         }
                         state = .float;
                     },
                 },
                 .keyword => {
-                    if (token.slice.len != 1 or token.slice[0] != 'a') {
-                        return Error.InvalidKeyword;
-                    }
-                    state = .keyword;
+                    // if (token.slice.len != 1 or token.slice[0] != 'a') {
+                    //     return Error.InvalidKeyword;
+                    // }
+                    // const keyword = self.keywords.get(token.slice) orelse return Error.InvalidKeyword;
+                    try self.validateKeyword(tokens, token.slice);
+                    state = .float;
                 },
             }
             old_error_info = .{ token.start, token.end, self.data.len };
@@ -236,6 +359,16 @@ pub const InfixEquation = struct {
             return Error.ParenMismatched;
         }
     }
+
+    fn validateInput(self: *Self, input: ?[]const u8) !void {
+        self.data = input orelse return Error.EmptyInput;
+        if (@import("builtin").os.tag == .windows) {
+            self.data = std.mem.trimRight(u8, self.data, "\r");
+        }
+        self.data = std.mem.trim(u8, self.data, " ");
+        var tokens = Tokenizer.init(self.data);
+        try self.validateArgument(&tokens);
+    }
 };
 
 /// Must be freed
@@ -243,14 +376,14 @@ pub const PostfixEquation = struct {
     const Self = @This();
 
     data: []const u8,
-    stdout: ?std.fs.File.Writer = null,
+    // stdout: ?std.fs.File.Writer = null,
     allocator: std.mem.Allocator,
 
     /// When created using this method, the resultant struct must be freed
     pub fn fromInfixEquation(equation: InfixEquation) !Self {
         return Self{
             .data = try infixToPostfix(equation),
-            .stdout = equation.stdout,
+            // .stdout = equation.stdout,
             .allocator = equation.allocator,
         };
     }
@@ -278,7 +411,7 @@ pub const PostfixEquation = struct {
                     } else |err| {
                         switch (err) {
                             Error.DivisionByZero => {
-                                if (self.stdout) |out| try Io.printError(err, out, null, null);
+                                // if (self.stdout) |out| try Io.printError(err, out, null, null);
                                 return err;
                             },
                             else => unreachable,

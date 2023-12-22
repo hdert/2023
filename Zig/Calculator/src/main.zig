@@ -10,21 +10,33 @@ pub fn main() !void {
     defer if (gpa.deinit() == .leak) std.debug.print("Memory leak", .{});
     var result: f64 = 0;
     var buffer: [100]u8 = undefined;
+    const io = Io.init(stdout, stdin);
+    var equation = try Calculator.Equation.init(
+        allocator,
+        null,
+        null,
+    );
+    defer equation.free();
+    try Io.registerKeywords(&equation);
 
-    try stdout.print("Use the keyword 'a' to substitute the previous answer\n", .{});
+    // try stdout.print("Use the keyword 'a' to substitute the previous answer\n", .{});
+    try io.defaultHelp();
     while (true) {
-        const infixEquation = try Io.getEquationFromUser(
+        try equation.registerPreviousAnswer(result);
+        const infixEquation = io.getInputFromUser(
+            equation,
             buffer[0..],
-            stdout,
-            stdin,
-            allocator,
-        );
+        ) catch |err| switch (err) {
+            Io.Error.Help => continue,
+            Io.Error.Exit => return,
+            else => return err,
+        };
 
         result = infixEquation.evaluate(result) catch |err| switch (err) {
             Calculator.Error.DivisionByZero => continue,
             else => return err,
         };
 
-        try Io.printResult(result, stdout);
+        try io.printResult(result);
     }
 }

@@ -79,20 +79,6 @@ pub fn printError(
     equation: ?[]const u8,
 ) !void {
     const stdout = self.stdout;
-    if (location) |l| {
-        switch (err) {
-            Cal.Error.DivisionByZero, Cal.Error.EmptyInput => {},
-            else => {
-                std.debug.assert(l[1] >= l[0]);
-                std.debug.assert(equation != null);
-                try stdout.print("{?s}\n", .{equation});
-                for (l[0]) |_| try stdout.writeAll("-");
-                for (l[1] - l[0]) |_| try stdout.writeAll("^");
-                for (l[2] - l[1]) |_| try stdout.writeAll("-");
-                try stdout.writeAll("\n");
-            },
-        }
-    }
     const E = Cal.Error;
     switch (err) {
         E.InvalidOperator, E.Comma => try stdout.writeAll(
@@ -141,6 +127,20 @@ pub fn printError(
             "Your argument to this function is invalid",
         ),
         else => return err,
+    }
+    if (location) |l| {
+        switch (err) {
+            Cal.Error.DivisionByZero, Cal.Error.EmptyInput => {},
+            else => {
+                std.debug.assert(l[1] >= l[0]);
+                std.debug.assert(equation != null);
+                try stdout.print("{?s}\n", .{equation});
+                for (l[0]) |_| try stdout.writeAll("-");
+                for (l[1] - l[0]) |_| try stdout.writeAll("^");
+                for (l[2] - l[1]) |_| try stdout.writeAll("-");
+                try stdout.writeAll("\n");
+            },
+        }
     }
 }
 

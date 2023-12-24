@@ -62,7 +62,14 @@ pub fn getInputFromUser(
 ) !Cal.InfixEquation {
     while (true) {
         try self.stdout.writeAll("Enter your equation: ");
-        const user_input = try self.stdin.readUntilDelimiterOrEof(buffer, '\n');
+        const user_input = self.stdin.readUntilDelimiterOrEof(buffer, '\n') catch |err| switch (err) {
+            error.StreamTooLong => {
+                try self.stdout.writeAll("Input too large\n");
+                try self.stdin.skipUntilDelimiterOrEof('\n'); // Try to flush stdin
+                continue;
+            },
+            else => return err,
+        };
         if (equation.newInfixEquation(user_input, self)) |result| {
             return result;
         } else |err| switch (err) {

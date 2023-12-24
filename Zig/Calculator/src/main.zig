@@ -9,7 +9,7 @@ pub fn main() !void {
     const allocator = gpa.allocator();
     defer if (gpa.deinit() == .leak) std.debug.print("Memory leak", .{});
     var result: f64 = 0;
-    var buffer: [100]u8 = undefined;
+    var buffer: [1000]u8 = undefined;
     const io = Io.init(stdout, stdin);
     var equation = try Calculator.Equation.init(
         allocator,
@@ -19,7 +19,6 @@ pub fn main() !void {
     defer equation.free();
     try Io.registerKeywords(&equation);
 
-    // try stdout.print("Use the keyword 'a' to substitute the previous answer\n", .{});
     try io.defaultHelp();
     while (true) {
         try equation.registerPreviousAnswer(result);

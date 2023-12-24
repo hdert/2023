@@ -29,9 +29,13 @@ pub fn registerKeywords(equation: *Cal.Equation) !void {
         "leave",
         "return",
         "quit",
+        "q",
+        "close",
     }, &[_]Cal.KeywordInfo{
         .{ .Return = Error.Help },
         .{ .Return = Error.Help },
+        .{ .Return = Error.Exit },
+        .{ .Return = Error.Exit },
         .{ .Return = Error.Exit },
         .{ .Return = Error.Exit },
         .{ .Return = Error.Exit },
@@ -151,8 +155,8 @@ pub fn defaultHelp(self: Self) !void {
         \\exception of the ordering of powers '^', these are ordered left-to-
         \\-right, unlike most calculators which order them right-to-left.
         \\
-        \\You can exit this calculator with the keywords 'exit', 'quit', or 
-        \\'leave'.
+        \\You can exit this calculator with the keywords 'exit', 'quit', 
+        \\'leave', 'close', or 'q'.
         \\You can call this help menu with the keywords 'h' or 'help'.
         \\This calculator supports using the previous answer with the keywords
         \\'a', 'ans', or 'answer'.

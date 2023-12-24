@@ -1,6 +1,6 @@
 const std = @import("std");
 const Calculator = @import("CalculatorLib.zig");
-const Io = @import("CalculatorIo.zig");
+const Io = @import("Io.zig");
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();

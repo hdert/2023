@@ -39,10 +39,10 @@
 const std = @import("std");
 const Stack = @import("Stack");
 const Tokenizer = @import("Tokenizer.zig");
-const Io = @import("CalculatorIo.zig");
+const Io = @import("Io.zig");
 const testing = std.testing;
 comptime {
-    _ = @import("CalculatorLibTests.zig");
+    _ = @import("Tests.zig");
 }
 
 pub const Error = error{
@@ -265,6 +265,7 @@ pub const InfixEquation = struct {
             while (true)
                 switch (tokens.next().tag) {
                     .right_paren => break,
+                    .left_paren => return Error.FnArgInvalid,
                     .eol => return Error.FnUnexpectedArgSize,
                     else => {},
                 };

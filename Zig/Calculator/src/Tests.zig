@@ -150,6 +150,7 @@ test "InfixEquation.fromString" {
     };
     var eq = try c.Equation.init(allocator, null, null);
     defer eq.free();
+    try eq.registerPreviousAnswer(0);
     for (test_cases.infix_equations, 0..) |case, i| {
         const result = eq.newInfixEquation(case, null) catch |err| {
             std.debug.print("\nNumber: {d}", .{i});
@@ -177,6 +178,7 @@ test "InfixEquation.fromString" {
 test "InfixEquation.toPostfixEquation" {
     var eq = try c.Equation.init(allocator, null, null);
     defer eq.free();
+    try eq.registerPreviousAnswer(0);
     for (test_cases.infix_equations, test_cases.postfix_equations) |infix, postfix| {
         const infixEquation = try eq.newInfixEquation(infix, null);
         const postfixEquation = try infixEquation.toPostfixEquation();
@@ -188,6 +190,7 @@ test "InfixEquation.toPostfixEquation" {
 test "PostfixEquation.fromInfixEquation" {
     var eq = try c.Equation.init(allocator, null, null);
     defer eq.free();
+    try eq.registerPreviousAnswer(0);
     for (test_cases.infix_equations, test_cases.postfix_equations) |infix, postfix| {
         const infixEquation = try eq.newInfixEquation(infix, null);
         const postfixEquation = try c.PostfixEquation.fromInfixEquation(infixEquation);

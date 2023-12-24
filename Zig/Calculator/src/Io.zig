@@ -128,7 +128,7 @@ pub fn printError(
             "Your arguments aren't within the range that this function expected\n",
         ),
         E.FnArgInvalid => try stdout.writeAll(
-            "Your argument to this function is invalid",
+            "Your argument to this function is invalid\n",
         ),
         else => return err,
     }

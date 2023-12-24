@@ -1,6 +1,7 @@
 const std = @import("std");
 const Calculator = @import("CalculatorLib.zig");
 const Io = @import("Io.zig");
+const Addons = @import("addons.zig");
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
@@ -18,6 +19,7 @@ pub fn main() !void {
     );
     defer equation.free();
     try Io.registerKeywords(&equation);
+    try Addons.registerKeywords(&equation);
 
     try io.defaultHelp();
     while (true) {
@@ -31,9 +33,9 @@ pub fn main() !void {
             else => return err,
         };
 
-        result = infixEquation.evaluate(result) catch |err| switch (err) {
-            Calculator.Error.DivisionByZero => continue,
-            else => return err,
+        result = infixEquation.evaluate() catch |err| {
+            try io.printError(err, null, null);
+            continue;
         };
 
         try io.printResult(result);

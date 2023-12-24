@@ -1,29 +1,5 @@
 //! A library for taking in user equations and evaluating them.
 //! TODO:
-//! - Create help and h keywords
-//!     - This is not really a library problem, this is a front-end
-//!     problem.
-//!     - Maybe help could be a special error type?
-//!     - What about wanting to call help on functions?
-//!         - This is probably to big of an ask right now, especially
-//!         if I want to automate it based off of function docstrings.
-//! - Create ans and answer keywords
-//!     - This is also a front-end problem, maybe I could create a
-//!     no input only output function. Almost like a constants function.
-//!     - It'd probably be better to implement this by just passing a number
-//!     to the library
-//!     - But then how'd you implement a help function?
-//!     - Answer, use a tagged union
-//! - Add support for multi-character operators
-//!     - Requirements:
-//!         - Allow more than 26 multi-character opererators
-//!             - I.e. Don't implement as a char lookup table
-//!         - Use a modifiable lookup table for next feature
-//!         - These are not allowed to be infix operators
-//!         - These must be for functions only
-//! - Add support for arbitrary functions that can be passed in by the caller.
-//!     - Allow them to have a chosen amount of arguments (between zero and inf)
-//!     - Allow them to take an array of arguments
 //! - Create tests for Tokenizer
 //!     - Depends on whether the code ever changes, and whether
 //!     the public method testing covers it.
@@ -33,8 +9,7 @@
 //!     - But does it?
 //!     - This has allowed me to keep a stable ABI despite numerous backend changes
 //!     - I don't think this is necessary, I can just keep copying data
-//! - Move functions that are actually the responsibility of the front-end
-//! to there.
+//! - Fix infinite loops on empty function input
 
 const std = @import("std");
 const Stack = @import("Stack");
@@ -232,19 +207,19 @@ pub const InfixEquation = struct {
     /// previousAnswer defaults to 0
     /// If InfixEquation has a valid stdout, prints errors to it using printError.
     /// Passes errors back to caller regardless of stdout being defined.
-    pub fn evaluate(self: Self, previousAnswer: ?f64) !f64 {
+    pub fn evaluate(self: Self) !f64 {
         const postfixEquation = try self.toPostfixEquation();
         defer postfixEquation.free();
-        return postfixEquation.evaluate(previousAnswer orelse 0);
+        return postfixEquation.evaluate();
     }
 
     // Private functions
 
-    fn validateKeyword(self: *Self, tokens: *Tokenizer, token_slice: []const u8) !void {
-        const keyword = self.keywords.get(token_slice) orelse return Error.InvalidKeyword;
+    fn validateKeyword(self: *Self, tokens: *Tokenizer, keyword: []const u8) !void {
+        const keywordInfo = self.keywords.get(keyword) orelse return Error.InvalidKeyword;
         var len: ?usize = null;
         var arg_counter: usize = 0;
-        switch (keyword) {
+        switch (keywordInfo) {
             .R => |err| return err,
             .F => |info| len = info.l,
             .S => {},
@@ -259,7 +234,10 @@ pub const InfixEquation = struct {
             while (true) : (arg_counter += 1) {
                 self.validateArgument(tokens) catch |err| switch (err) {
                     Error.Comma => continue,
-                    Error.ParenMismatchedClose => break,
+                    Error.ParenMismatchedClose => {
+                        arg_counter += 1;
+                        break;
+                    },
                     else => return err,
                 };
             }
@@ -382,20 +360,25 @@ pub const PostfixEquation = struct {
     data: []const u8,
     // stdout: ?std.fs.File.Writer = null,
     allocator: std.mem.Allocator,
+    keywords: std.StringHashMap(KeywordInfo),
 
     /// When created using this method, the resultant struct must be freed
     pub fn fromInfixEquation(equation: InfixEquation) !Self {
-        return Self{
-            .data = try infixToPostfix(equation),
-            // .stdout = equation.stdout,
+        var self = Self{
+            .data = undefined,
             .allocator = equation.allocator,
+            .keywords = equation.keywords,
         };
+
+        self.data = try self.infixToPostfix(equation);
+
+        return self;
     }
 
     /// Evaluate a postfix expression.
     /// If PostfixEquation has a valid stdout, prints errors to it using printError.
     /// Passes errors back to caller regardless of stdout being defined.
-    pub fn evaluate(self: Self, previousAnswer: f64) !f64 {
+    pub fn evaluate(self: Self) !f64 {
         var stack = Stack.Stack(f64).init(self.allocator);
         defer stack.free();
         var tokens = std.mem.tokenizeScalar(u8, self.data, ' ');
@@ -403,9 +386,6 @@ pub const PostfixEquation = struct {
             switch (token[token.len - 1]) {
                 '0'...'9', '.' => {
                     try stack.push(try std.fmt.parseFloat(f64, token));
-                },
-                'a' => {
-                    try stack.push(if (token[0] == '-') -previousAnswer else previousAnswer);
                 },
                 else => {
                     std.debug.assert(token.len == 1);
@@ -447,8 +427,71 @@ pub const PostfixEquation = struct {
         try stack.push(operator);
     }
 
+    fn findArgumentEnd(tokens: *Tokenizer) Tokenizer.Token {
+        var paren_counter: isize = 0;
+        while (true) {
+            const token = tokens.next();
+            // std.debug.print("{any}\n", .{token.tag});
+            switch (token.tag) {
+                // Our equation is valid, so cannot return on invalid state
+                .comma => if (paren_counter == 0) return token,
+                .left_paren => paren_counter += 1,
+                .right_paren => {
+                    paren_counter -= 1;
+                    if (paren_counter < 0) {
+                        return token;
+                    }
+                },
+                // .eol => unreachable,
+                else => continue,
+            }
+        }
+    }
+
+    fn evaluateKeyword(self: Self, tokens: *Tokenizer, token_slice: []const u8) anyerror!f64 {
+        const keyword = self.keywords.get(token_slice).?;
+        switch (keyword) {
+            .R => unreachable,
+            .F => |info| {
+                _ = tokens.next();
+                var args = std.ArrayList(f64).init(self.allocator);
+                defer args.deinit();
+                while (true) {
+                    const start = tokens.next().start;
+                    const token = findArgumentEnd(tokens);
+                    // std.debug.print("'{s}'\n", .{tokens.buffer[start..token.start]});
+
+                    const infix = InfixEquation{
+                        .data = tokens.buffer[start..token.start],
+                        .allocator = self.allocator,
+                        .keywords = self.keywords,
+                    };
+                    try args.append(try infix.evaluate());
+                    if (token.tag == .right_paren) break;
+                }
+                const arg_slice = try args.toOwnedSlice();
+                defer self.allocator.free(arg_slice);
+                return info.ptr(arg_slice);
+            },
+            .S => |ptr| {
+                _ = tokens.next();
+                const start = tokens.next().start;
+                var end: usize = undefined;
+                while (true) {
+                    const token = tokens.next();
+                    if (token.tag == .right_paren) {
+                        end = token.start;
+                        break;
+                    }
+                }
+                return ptr(tokens.buffer[start..end]);
+            },
+            .C => |data| return data,
+        }
+    }
+
     /// Returns string that must be freed
-    fn infixToPostfix(equation: InfixEquation) ![]u8 {
+    fn infixToPostfix(self: Self, equation: InfixEquation) ![]u8 {
         var stack = Stack.Stack(Operator).init(equation.allocator);
         defer stack.free();
         var output = std.ArrayList(u8).init(equation.allocator);
@@ -475,15 +518,16 @@ pub const PostfixEquation = struct {
                     try output.appendSlice(token.slice);
                 },
                 .keyword => {
+                    var result = try self.evaluateKeyword(&tokens, token.slice);
                     switch (state) {
                         .none => {},
-                        .negative => try output.append('-'),
+                        .negative => result = -result,
                         .float => {
                             try addOperatorToStack(&stack, .multiplication, &output);
                         },
                     }
+                    try std.fmt.format(output.writer(), "{d}", .{result});
                     state = .float;
-                    try output.appendSlice(token.slice);
                 },
                 .minus => switch (state) {
                     .none => state = .negative,

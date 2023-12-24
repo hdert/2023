@@ -100,7 +100,7 @@ pub fn next(self: *Self) Token {
     return result;
 }
 
-const Token = struct {
+pub const Token = struct {
     slice: []const u8 = undefined,
     start: usize = undefined,
     end: usize = undefined,

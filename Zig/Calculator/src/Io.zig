@@ -32,14 +32,14 @@ pub fn registerKeywords(equation: *Cal.Equation) !void {
         "q",
         "close",
     }, &[_]Cal.KeywordInfo{
-        .{ .Return = Error.Help },
-        .{ .Return = Error.Help },
-        .{ .Return = Error.Exit },
-        .{ .Return = Error.Exit },
-        .{ .Return = Error.Exit },
-        .{ .Return = Error.Exit },
-        .{ .Return = Error.Exit },
-        .{ .Return = Error.Exit },
+        .{ .R = Error.Help },
+        .{ .R = Error.Help },
+        .{ .R = Error.Exit },
+        .{ .R = Error.Exit },
+        .{ .R = Error.Exit },
+        .{ .R = Error.Exit },
+        .{ .R = Error.Exit },
+        .{ .R = Error.Exit },
     });
 }
 

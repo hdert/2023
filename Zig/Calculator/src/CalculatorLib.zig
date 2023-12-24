@@ -42,7 +42,7 @@ const Tokenizer = @import("Tokenizer.zig");
 const Io = @import("Io.zig");
 const testing = std.testing;
 comptime {
-    _ = @import("Tests.zig");
+    _ = @import("tests.zig");
 }
 
 pub const Error = error{
@@ -123,18 +123,22 @@ const Operator = enum(u8) {
 
 pub const KeywordInfo = union(enum) {
     const Function = struct {
-        arg_size: usize,
-        ptr: *const fn (f64) Error!f64,
+        l: usize,
+        ptr: *const fn ([]f64) anyerror!f64,
     };
 
-    Return: anyerror,
-    Functionf64: Function,
+    /// Return
+    R: anyerror,
+    /// Function
+    F: Function,
     // FunctionTwoArgf64: *const fn (f64, f64) Error!f64,
     // We want to provide options for functions that don't have to enforce
     // parameter length.
     // FunctionMultif64: *const fn ([]const f64) Error!f64,
-    FunctionString: *const fn ([]const u8) anyerror!f64,
-    Constant: f64,
+    /// String
+    S: *const fn ([]const u8) anyerror!f64,
+    /// Constant
+    C: f64,
 };
 
 /// Must be freed due to hashmap
@@ -171,9 +175,9 @@ pub const Equation = struct {
         try self.addKeywords(
             &[_][]const u8{ "a", "ans", "answer" },
             &[_]KeywordInfo{
-                .{ .Constant = prev_ans },
-                .{ .Constant = prev_ans },
-                .{ .Constant = prev_ans },
+                .{ .C = prev_ans },
+                .{ .C = prev_ans },
+                .{ .C = prev_ans },
             },
         );
     }
@@ -241,37 +245,39 @@ pub const InfixEquation = struct {
 
     fn validateKeyword(self: *Self, tokens: *Tokenizer, token_slice: []const u8) !void {
         const keyword = self.keywords.get(token_slice) orelse return Error.InvalidKeyword;
-        var len: usize = 0;
+        var len: ?usize = null;
         var arg_counter: usize = 0;
         switch (keyword) {
-            .Return => |err| return err,
-            .Functionf64 => |info| len = info.arg_size,
-            .FunctionString => {},
-            .Constant => return,
+            .R => |err| return err,
+            .F => |info| len = info.l,
+            .S => {},
+            .C => return,
         }
         const token = tokens.next();
         if (token.tag != .left_paren) {
             self.error_info = .{ token.start, token.end, self.data.len };
             return Error.InvalidKeyword;
         }
-        if (len > 0) {
-            while (true) : (arg_counter += 1)
+        if (len) |l| {
+            while (true) : (arg_counter += 1) {
                 self.validateArgument(tokens) catch |err| switch (err) {
                     Error.Comma => continue,
                     Error.ParenMismatchedClose => break,
                     else => return err,
                 };
+            }
+            if (l > 0 and arg_counter != l)
+                return Error.FnUnexpectedArgSize;
         } else {
-            while (true)
+            while (true) {
                 switch (tokens.next().tag) {
                     .right_paren => break,
                     .left_paren => return Error.FnArgInvalid,
                     .eol => return Error.FnUnexpectedArgSize,
                     else => {},
-                };
+                }
+            }
         }
-        if (arg_counter != len)
-            return Error.FnUnexpectedArgSize;
     }
 
     fn validateArgument(self: *Self, tokens: *Tokenizer) anyerror!void {

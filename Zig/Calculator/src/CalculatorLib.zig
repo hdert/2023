@@ -41,9 +41,6 @@ const Stack = @import("Stack");
 const Tokenizer = @import("Tokenizer.zig");
 const Io = @import("Io.zig");
 const testing = std.testing;
-comptime {
-    _ = @import("tests.zig");
-}
 
 pub const Error = error{
     InvalidOperator,
@@ -256,7 +253,7 @@ pub const InfixEquation = struct {
         const token = tokens.next();
         if (token.tag != .left_paren) {
             self.error_info = .{ token.start, token.end, self.data.len };
-            return Error.InvalidKeyword;
+            return Error.FnArgInvalid;
         }
         if (len) |l| {
             while (true) : (arg_counter += 1) {
@@ -336,7 +333,7 @@ pub const InfixEquation = struct {
                     state = .paren;
                 },
                 .right_paren => switch (state) {
-                    .start => return Error.ParenMismatched,
+                    .start => return Error.ParenMismatchedClose,
                     .operator, .minus => {
                         self.error_info = old_error_info;
                         return Error.ParenEndsWithOperator;
@@ -544,6 +541,10 @@ pub const PostfixEquation = struct {
         };
     }
 };
+
+test {
+    _ = @import("tests.zig");
+}
 
 test "Operator.precedence validity" {
     const success_cases = .{ '+', '-', '/', '*', '^', '%', '(', ')' };

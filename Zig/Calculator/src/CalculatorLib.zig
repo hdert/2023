@@ -159,7 +159,7 @@ pub const Equation = struct {
     }
 
     pub fn free(self: *Self) void {
-        self.keywords.clearAndFree();
+        self.keywords.deinit();
     }
 };
 

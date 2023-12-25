@@ -5,6 +5,7 @@ const targets: []const std.zig.CrossTarget = &.{
     .{ .cpu_arch = .x86_64, .os_tag = .windows },
     .{ .cpu_arch = .x86_64, .os_tag = .macos },
     .{ .cpu_arch = .aarch64, .os_tag = .macos },
+    .{ .cpu_arch = .wasm32, .os_tag = .wasi },
 };
 
 pub fn build(b: *std.Build) !void {

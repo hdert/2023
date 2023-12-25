@@ -200,18 +200,16 @@ test "PostfixEquation.fromInfixEquation" {
 }
 
 test "InfixEquation.evaluate" {
+    var eq = try c.Equation.init(allocator, null, null);
+    defer eq.free();
     for (
         test_cases.infix_equations,
         test_cases.inputs,
         test_cases.results,
     ) |infix, input, result| {
-        var infix_equation = c.InfixEquation{
-            .data = infix,
-            .allocator = allocator,
-            .keywords = std.StringHashMap(c.KeywordInfo).init(allocator),
-        };
-        defer infix_equation.keywords.clearAndFree();
-        const output = try infix_equation.evaluate(input);
+        try eq.registerPreviousAnswer(input);
+        var infix_equation = try eq.newInfixEquation(infix, null);
+        const output = try infix_equation.evaluate();
         testing.expectEqual(result, output) catch |err| {
             std.debug.print("Expected: {d}\nGot: {d}\nCase: {s}\nPrevious Answer: {d}\n", .{
                 result,
@@ -237,16 +235,20 @@ test "PostfixEquation.evaluate" {
         0, 0,
         0,
     };
+    var eq = try c.Equation.init(allocator, null, null);
+    defer eq.free();
     for (
         test_cases.postfix_equations,
         test_cases.inputs,
         test_cases.results,
     ) |postfix, input, result| {
+        try eq.registerPreviousAnswer(input);
         const postfix_equation = c.PostfixEquation{
             .data = postfix,
             .allocator = allocator,
+            .keywords = eq.keywords,
         };
-        const output = try postfix_equation.evaluate(input);
+        const output = try postfix_equation.evaluate();
         testing.expectEqual(result, output) catch |err| {
             std.debug.print("Expected: {d}\nGot: {d}\nCase: {s}\nPrevious Answer: {d}\n", .{
                 result,
@@ -258,11 +260,13 @@ test "PostfixEquation.evaluate" {
         };
     }
     for (fail_cases, fail_result_input) |case, input| {
+        try eq.registerPreviousAnswer(input);
         const postfix_equation = c.PostfixEquation{
             .data = case,
             .allocator = allocator,
+            .keywords = eq.keywords,
         };
-        const result = postfix_equation.evaluate(input);
+        const result = postfix_equation.evaluate();
         if (result) |_| {
             return error.NotFail;
         } else |_| {}

@@ -34,7 +34,7 @@ pub fn main() !void {
         };
 
         result = infixEquation.evaluate() catch |err| {
-            try io.printError(err, null, null);
+            try io.handleError(err, null, null);
             continue;
         };
 

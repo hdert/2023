@@ -132,6 +132,10 @@ const test_cases: testData = .{
     },
 };
 
+test {
+    _ = @import("CalculatorLib.zig");
+}
+
 test "InfixEquation.fromString" {
     const fail_cases = [_]?[]const u8{
         "-",       "10++10",     "10(*10)",

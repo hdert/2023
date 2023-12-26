@@ -14,7 +14,6 @@
 const std = @import("std");
 const Stack = @import("Stack");
 const Tokenizer = @import("Tokenizer.zig");
-const Io = @import("Io.zig");
 const testing = std.testing;
 
 pub const Error = error{
@@ -117,18 +116,15 @@ pub const KeywordInfo = union(enum) {
 pub const Equation = struct {
     const Self = @This();
 
-    // stdout: ?std.fs.File.Writer = null,
     allocator: std.mem.Allocator,
     keywords: std.StringHashMap(KeywordInfo),
 
     pub fn init(
-        // stdout: ?std.fs.File.Writer,
         allocator: std.mem.Allocator,
         keys: ?[]const []const u8,
         values: ?[]const KeywordInfo,
     ) !Self {
         var self = Self{
-            // stdout,
             .allocator = allocator,
             .keywords = std.StringHashMap(KeywordInfo).init(allocator),
         };
@@ -154,8 +150,8 @@ pub const Equation = struct {
         );
     }
 
-    pub fn newInfixEquation(self: Self, input: ?[]const u8, io: ?Io) !InfixEquation {
-        return InfixEquation.fromString(input, self.allocator, self.keywords, io);
+    pub fn newInfixEquation(self: Self, input: ?[]const u8, error_handler: anytype) !InfixEquation {
+        return InfixEquation.fromString(input, self.allocator, self.keywords, error_handler);
     }
 
     pub fn free(self: *Self) void {
@@ -176,22 +172,23 @@ pub const InfixEquation = struct {
         input: ?[]const u8,
         allocator: std.mem.Allocator,
         keywords: std.StringHashMap(KeywordInfo),
-        io: ?Io,
+        error_handler: anytype,
     ) !Self {
         var self = Self{
             .data = undefined,
-            // .stdout = stdout,
             .allocator = allocator,
             .keywords = keywords,
         };
         validateInput(&self, input) catch |err| switch (err) {
             Error.DivisionByZero => unreachable,
             else => {
-                if (io) |i| try i.printError(
-                    err,
-                    self.error_info,
-                    self.data,
-                );
+                if (@TypeOf(error_handler) != @TypeOf(null)) {
+                    try error_handler.handleError(
+                        err,
+                        self.error_info,
+                        self.data,
+                    );
+                }
                 return err;
             },
         };
@@ -326,10 +323,6 @@ pub const InfixEquation = struct {
                     },
                 },
                 .keyword => {
-                    // if (token.slice.len != 1 or token.slice[0] != 'a') {
-                    //     return Error.InvalidKeyword;
-                    // }
-                    // const keyword = self.keywords.get(token.slice) orelse return Error.InvalidKeyword;
                     try self.validateKeyword(tokens, token.slice);
                     state = .float;
                 },
@@ -358,7 +351,6 @@ pub const PostfixEquation = struct {
     const Self = @This();
 
     data: []const u8,
-    // stdout: ?std.fs.File.Writer = null,
     allocator: std.mem.Allocator,
     keywords: std.StringHashMap(KeywordInfo),
 
@@ -431,7 +423,7 @@ pub const PostfixEquation = struct {
         var paren_counter: isize = 0;
         while (true) {
             const token = tokens.next();
-            // std.debug.print("{any}\n", .{token.tag});
+            std.log.debug("{any}\n", .{token.tag});
             switch (token.tag) {
                 // Our equation is valid, so cannot return on invalid state
                 .comma => if (paren_counter == 0) return token,
@@ -442,7 +434,7 @@ pub const PostfixEquation = struct {
                         return token;
                     }
                 },
-                // .eol => unreachable,
+                .eol => unreachable,
                 else => continue,
             }
         }
@@ -459,7 +451,7 @@ pub const PostfixEquation = struct {
                 while (true) {
                     const start = tokens.next().start;
                     const token = findArgumentEnd(tokens);
-                    // std.debug.print("'{s}'\n", .{tokens.buffer[start..token.start]});
+                    std.log.debug("'{s}'\n", .{tokens.buffer[start..token.start]});
 
                     const infix = InfixEquation{
                         .data = tokens.buffer[start..token.start],
@@ -585,10 +577,6 @@ pub const PostfixEquation = struct {
         };
     }
 };
-
-test {
-    _ = @import("tests.zig");
-}
 
 test "Operator.precedence validity" {
     const success_cases = .{ '+', '-', '/', '*', '^', '%', '(', ')' };

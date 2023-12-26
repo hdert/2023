@@ -83,7 +83,7 @@ pub fn getInputFromUser(
     }
 }
 
-pub fn printError(
+pub fn handleError(
     self: Self,
     err: anyerror,
     location: ?[3]usize,

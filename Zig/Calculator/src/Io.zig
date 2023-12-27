@@ -92,7 +92,9 @@ pub fn handleError(
     const stdout = self.stdout;
     const E = Cal.Error;
     switch (err) {
-        E.InvalidOperator, E.Comma => try stdout.writeAll(
+        E.InvalidOperator,
+        E.Comma,
+        => try stdout.writeAll(
             "You have entered an invalid operator\n",
         ),
         E.InvalidKeyword => try stdout.writeAll(
@@ -122,7 +124,10 @@ pub fn handleError(
         E.ParenEndsWithOperator => try stdout.writeAll(
             "You cannot end a parentheses block with an operator\n",
         ),
-        E.ParenMismatched, E.ParenMismatchedClose => try stdout.writeAll(
+        E.ParenMismatched,
+        E.ParenMismatchedClose,
+        E.ParenMismatchedStart,
+        => try stdout.writeAll(
             "Mismatched parentheses!\n",
         ),
         E.InvalidFloat => try stdout.writeAll(
@@ -183,4 +188,18 @@ pub fn defaultHelp(self: Self) !void {
         \\For a full list of functions, please consult the user manual.
         \\
     );
+}
+
+test "handleError" {
+    inline for (@typeInfo(Cal.Error).ErrorSet.?) |e| {
+        try handleError(
+            Self{
+                .stdout = std.io.getStdOut().writer(),
+                .stdin = std.io.getStdIn().reader(),
+            },
+            @field(Cal.Error, e.name),
+            null,
+            null,
+        );
+    }
 }

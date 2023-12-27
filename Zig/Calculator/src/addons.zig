@@ -18,6 +18,8 @@ const Cal = @import("CalculatorLib.zig");
 
 pub fn registerKeywords(equation: *Cal.Equation) !void {
     try equation.addKeywords(&[_][]const u8{
+        "sqrt",
+        "abs",
         "sin",
         "sinh",
         "sum",
@@ -27,7 +29,11 @@ pub fn registerKeywords(equation: *Cal.Equation) !void {
         "min",
         "max",
         "pi",
+        "e",
+        "tau",
     }, &[_]Cal.KeywordInfo{
+        .{ .F = .{ .l = 1, .ptr = sqrt } },
+        .{ .F = .{ .l = 1, .ptr = abs } },
         .{ .F = .{ .l = 1, .ptr = sin } },
         .{ .F = .{ .l = 1, .ptr = sinh } },
         .{ .F = .{ .l = 0, .ptr = sum } },
@@ -37,7 +43,21 @@ pub fn registerKeywords(equation: *Cal.Equation) !void {
         .{ .F = .{ .l = 0, .ptr = min } },
         .{ .F = .{ .l = 0, .ptr = max } },
         .{ .C = std.math.pi },
+        .{ .C = std.math.e },
+        .{ .C = std.math.tau },
     });
+}
+
+// Math functions
+
+fn sqrt(i: []f64) !f64 {
+    std.debug.assert(i.len == 1);
+    return std.math.sqrt(i[0]);
+}
+
+fn abs(i: []f64) !f64 {
+    std.debug.assert(i.len == 1);
+    return if (i[0] < 0) -i[0] else i[0];
 }
 
 // Trigonometry functions

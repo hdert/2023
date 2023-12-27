@@ -29,6 +29,7 @@ pub const Error = error{
     ParenEndsWithOperator,
     ParenMismatched,
     ParenMismatchedClose,
+    ParenMismatchedStart,
     InvalidFloat,
     FnUnexpectedArgSize,
     FnArgBoundsViolated,
@@ -50,6 +51,7 @@ pub fn isError(err: anyerror) bool {
         Error.ParenEndsWithOperator,
         Error.ParenMismatched,
         Error.ParenMismatchedClose,
+        Error.ParenMismatchedStart,
         Error.InvalidFloat,
         Error.FnUnexpectedArgSize,
         Error.FnArgBoundsViolated,
@@ -308,7 +310,7 @@ pub const InfixEquation = struct {
                     state = .paren;
                 },
                 .right_paren => switch (state) {
-                    .start => return Error.ParenMismatchedClose,
+                    .start => return Error.ParenMismatchedStart,
                     .operator, .minus => {
                         self.error_info = old_error_info;
                         return Error.ParenEndsWithOperator;
@@ -423,7 +425,7 @@ pub const PostfixEquation = struct {
         var paren_counter: isize = 0;
         while (true) {
             const token = tokens.next();
-            std.log.debug("{any}\n", .{token.tag});
+            std.log.debug("{any}", .{token.tag});
             switch (token.tag) {
                 // Our equation is valid, so cannot return on invalid state
                 .comma => if (paren_counter == 0) return token,
@@ -451,7 +453,7 @@ pub const PostfixEquation = struct {
                 while (true) {
                     const start = tokens.next().start;
                     const token = findArgumentEnd(tokens);
-                    std.log.debug("'{s}'\n", .{tokens.buffer[start..token.start]});
+                    std.log.debug("'{s}'", .{tokens.buffer[start..token.start]});
 
                     const infix = InfixEquation{
                         .data = tokens.buffer[start..token.start],

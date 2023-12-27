@@ -136,6 +136,16 @@ test {
     _ = @import("CalculatorLib.zig");
 }
 
+test {
+    _ = @import("Io.zig");
+}
+
+test "isError" {
+    inline for (@typeInfo(c.Error).ErrorSet.?) |e| {
+        try testing.expect(c.isError(@field(c.Error, e.name)));
+    }
+}
+
 test "InfixEquation.fromString" {
     const fail_cases = [_]?[]const u8{
         "-",       "10++10",     "10(*10)",

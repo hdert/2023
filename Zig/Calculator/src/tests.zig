@@ -64,35 +64,35 @@ const test_cases: testData = .{
         "10",                   "10.10 10.10 +",
         "10.999",               "10.789 10.123 *",
         "10.123 10.123 +",      "10.",
-        "10 10 2 / 3 * + 10 +", "10 a +",
-        "10. 10. +",            "a",
-        "a",                    "-a",
-        "a a +",                "a a * a +",
-        "123. a +",             "0.123",
+        "10 10 2 / 3 * + 10 +", "10 10 +",
+        "10. 10. +",            "0",
+        "10",                   "-10",
+        "10 10 +",              "10 10 * 10 +",
+        "123. 0.456 +",         "0.123",
         "0.",                   "123.",
         "10 10 *",              "10 10 * 10 *",
         "10 10 *",              "10 10 *",
         "10 10 *",              "10 10 10 * +",
         "10.123 10 *",          "10 10 *",
-        "a a *",                "10 a *",
-        "10 a *",               "10 a *",
-        "a 10 *",               "10 a * 10 *",
-        "a 10 *",               "10 a * 10 *",
-        "a 10 *",               "10 10 ^ 10 *",
-        "a a * a *",            "-10",
-        "-0.",                  "-a",
+        "10 10 *",              "10 10 *",
+        "10 10 *",              "10 10 *",
+        "10 10 *",              "10 10 * 10 *",
+        "10 10 *",              "10 10 * 10 *",
+        "10 10 *",              "10 10 ^ 10 *",
+        "10 10 * 10 *",         "-10",
+        "-0.",                  "-10",
         "10 10 -",              "0 10 -",
         "0 -10 +",              "10 -10 *",
         "10 -10 -",             "10 10 -",
         "10 10 +",              "10 0. -",
-        "10 -a -",              "-0",
+        "10 10 -",              "-0",
         "-0.0",                 "-0.",
         "0",                    "0.",
         "0.0",                  "0.0",
         "0.",                   "-0. 0 -",
         "0. 0 -",               "0.0 -0 -",
         "0. -0 -",              "0. 0. - 0 -",
-        "0. -0. -",             "a",
+        "0. -0. -",             "10",
         "-1 10 5 + *",          "10 5 +",
         "10 10 5 + -",          "10 -1 10 5 + * +",
         "10 2 3 3 * + + 10 -",  "10. 10.456 *",
@@ -198,8 +198,12 @@ test "InfixEquation.fromString" {
 test "InfixEquation.toPostfixEquation" {
     var eq = try c.Equation.init(allocator, null, null);
     defer eq.free();
-    try eq.registerPreviousAnswer(0);
-    for (test_cases.infix_equations, test_cases.postfix_equations) |infix, postfix| {
+    for (
+        test_cases.infix_equations,
+        test_cases.postfix_equations,
+        test_cases.inputs,
+    ) |infix, postfix, input| {
+        try eq.registerPreviousAnswer(input);
         const infixEquation = try eq.newInfixEquation(infix, null);
         const postfixEquation = try infixEquation.toPostfixEquation();
         defer postfixEquation.free();
@@ -210,8 +214,12 @@ test "InfixEquation.toPostfixEquation" {
 test "PostfixEquation.fromInfixEquation" {
     var eq = try c.Equation.init(allocator, null, null);
     defer eq.free();
-    try eq.registerPreviousAnswer(0);
-    for (test_cases.infix_equations, test_cases.postfix_equations) |infix, postfix| {
+    for (
+        test_cases.infix_equations,
+        test_cases.postfix_equations,
+        test_cases.inputs,
+    ) |infix, postfix, input| {
+        try eq.registerPreviousAnswer(input);
         const infixEquation = try eq.newInfixEquation(infix, null);
         const postfixEquation = try c.PostfixEquation.fromInfixEquation(infixEquation);
         defer postfixEquation.free();
@@ -246,23 +254,15 @@ test "PostfixEquation.evaluate" {
     const fail_cases = [_][]const u8{
         "10 0 /",       "10 0 %",
         "10 10 10 - /", "10 10 10 - %",
-        "10 a /",       "10 a %",
+        "10 0 /",       "10 0 %",
         "--10",
-    };
-    const fail_result_input = [_]f64{
-        0, 0,
-        0, 0,
-        0, 0,
-        0,
     };
     var eq = try c.Equation.init(allocator, null, null);
     defer eq.free();
     for (
         test_cases.postfix_equations,
-        test_cases.inputs,
         test_cases.results,
-    ) |postfix, input, result| {
-        try eq.registerPreviousAnswer(input);
+    ) |postfix, result| {
         const postfix_equation = c.PostfixEquation{
             .data = postfix,
             .allocator = allocator,
@@ -270,17 +270,15 @@ test "PostfixEquation.evaluate" {
         };
         const output = try postfix_equation.evaluate();
         testing.expectEqual(result, output) catch |err| {
-            std.debug.print("Expected: {d}\nGot: {d}\nCase: {s}\nPrevious Answer: {d}\n", .{
+            std.debug.print("Expected: {d}\nGot: {d}\nCase: {s}\n", .{
                 result,
                 output,
                 postfix,
-                input,
             });
             return err;
         };
     }
-    for (fail_cases, fail_result_input) |case, input| {
-        try eq.registerPreviousAnswer(input);
+    for (fail_cases) |case| {
         const postfix_equation = c.PostfixEquation{
             .data = case,
             .allocator = allocator,

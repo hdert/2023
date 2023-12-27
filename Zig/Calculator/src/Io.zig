@@ -237,8 +237,8 @@ test "handleError" {
     inline for (@typeInfo(Cal.Error).ErrorSet.?) |e| {
         try handleError(
             Self{
-                .stdout = std.io.getStdOut().writer(),
-                .stdin = std.io.getStdIn().reader(),
+                .stdout = std.io.getStdErr().writer(),
+                .stdin = undefined,
             },
             @field(Cal.Error, e.name),
             null,

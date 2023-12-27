@@ -30,6 +30,7 @@ pub fn main() !void {
         ) catch |err| switch (err) {
             Io.Error.Help => continue,
             Io.Error.Exit => return,
+            Io.Error.Keywords => continue,
             else => return err,
         };
 

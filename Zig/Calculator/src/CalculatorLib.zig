@@ -9,7 +9,8 @@
 //!     - But does it?
 //!     - This has allowed me to keep a stable ABI despite numerous backend changes
 //!     - I don't think this is necessary, I can just keep copying data
-//! - Fix infinite loops on empty function input
+//!     - Something else needs to be done to organize the code though
+//! - Find way to do fuzzing
 
 const std = @import("std");
 const Stack = @import("Stack");
@@ -104,10 +105,6 @@ pub const KeywordInfo = union(enum) {
     R: anyerror,
     /// Function
     F: Function,
-    // FunctionTwoArgf64: *const fn (f64, f64) Error!f64,
-    // We want to provide options for functions that don't have to enforce
-    // parameter length.
-    // FunctionMultif64: *const fn ([]const f64) Error!f64,
     /// String
     S: *const fn ([]const u8) anyerror!f64,
     /// Constant

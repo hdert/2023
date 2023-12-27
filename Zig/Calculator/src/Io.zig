@@ -1,12 +1,17 @@
 //! All calculator and library helper functions that deal with IO.
-//! This module is entirely untested, due to it's nature, so extra
+//! This module is nearly entirely untested, due to it's nature, so extra
 //! scrutiny is advised and required.
+//! TODO:
+//! - Implement function that prints all keywords prettily with as much
+//! information as possible.
+//! - Update help function to hint to this keyword
 const std = @import("std");
 const Cal = @import("CalculatorLib.zig");
 
 pub const Error = error{
     Help,
     Exit,
+    Keywords,
 };
 
 const Self = @This();
@@ -31,6 +36,7 @@ pub fn registerKeywords(equation: *Cal.Equation) !void {
         "quit",
         "q",
         "close",
+        "keywords",
     }, &[_]Cal.KeywordInfo{
         .{ .R = Error.Help },
         .{ .R = Error.Help },
@@ -40,6 +46,7 @@ pub fn registerKeywords(equation: *Cal.Equation) !void {
         .{ .R = Error.Exit },
         .{ .R = Error.Exit },
         .{ .R = Error.Exit },
+        .{ .R = Error.Keywords },
     });
 }
 
@@ -78,11 +85,22 @@ pub fn getInputFromUser(
                 return err;
             },
             Error.Exit => return err,
+            Error.Keywords => {
+                try self.printKeywords(equation);
+                return err;
+            },
             else => if (!Cal.isError(err)) return err,
         }
     }
 }
 
+/// Handles any internal error passed to it.
+/// It will print error info if this has been passed to it.
+/// If location is not null, equation must be not null.
+/// In the case the error passed to it is not internal,
+/// it will return that error as an error.
+/// This function is not meant to check if an error is internal,
+/// for that use isError from the Calculator Library.
 pub fn handleError(
     self: Self,
     err: anyerror,
@@ -160,6 +178,31 @@ pub fn handleError(
     }
 }
 
+/// This doesn't work very well, maybe a function help module would be nicer?
+pub fn printKeywords(self: Self, equation: Cal.Equation) !void {
+    var iterator = equation.keywords.iterator();
+    while (true) {
+        const entry = iterator.next() orelse break;
+        if (entry.value_ptr.* != .R)
+            try self.stdout.print("{s}: ", .{entry.key_ptr.*});
+        switch (entry.value_ptr.*) {
+            .R => continue,
+            .F => |function| {
+                if (function.l == 0) {
+                    try self.stdout.writeAll("function with infinite arguments\n");
+                } else {
+                    try self.stdout.print("function with {d} arguments\n", .{function.l});
+                }
+            },
+            .S => try self.stdout.writeAll("function with string input\n"),
+            .C => |num| {
+                try self.stdout.print("constant with value {d}\n", .{num});
+            },
+        }
+    }
+}
+
+/// Print out a nice default help.
 pub fn defaultHelp(self: Self) !void {
     try self.stdout.writeAll(
         \\General Purpose Calculator, written in Zig by Justin, © 2023-2024
@@ -185,7 +228,7 @@ pub fn defaultHelp(self: Self) !void {
         \\    'cos(2pi)'
         \\    'sum(2.5pi, -5, 40)'
         \\
-        \\For a full list of functions, please consult the user manual.
+        \\For a full list of functions and constants, use the command 'keywords'.
         \\
     );
 }

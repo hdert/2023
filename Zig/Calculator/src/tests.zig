@@ -1,3 +1,5 @@
+/// TODO:
+/// - Fix tests
 const std = @import("std");
 const Stack = @import("Stack");
 const c = @import("CalculatorLib.zig");
@@ -138,6 +140,10 @@ test {
 
 test {
     _ = @import("Io.zig");
+}
+
+test {
+    _ = @import("addons.zig");
 }
 
 test "isError" {

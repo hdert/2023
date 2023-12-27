@@ -1,27 +1,34 @@
 //! Addon functions for the calculator
 //! TODO:
-//! - How to best implement and package function pointers for
-//! the library?
-//!     - We can't just pass them individually, and that would be
-//! less extensible anyway requiring lots of boilerplate.
+//! - Write unit tests for non-standard functions
+//! - Fix crashes by implementing proper error types
+//! - Write end-to-end testing for addons
 const std = @import("std");
 const Cal = @import("CalculatorLib.zig");
-
-// @sin, sinh, asin, asinh, @cos, cosh, acos, acosh, @tan, tanh, atan, atanh
-// @sqrt, cbrt, abs, @exp
-// @log, @log2, @log10
-// @abs
-
-// e, pi, tau
-
-// sum, average, mode, median
 
 pub fn registerKeywords(equation: *Cal.Equation) !void {
     try equation.addKeywords(&[_][]const u8{
         "sqrt",
         "abs",
+        "exp",
+        "exp2",
+        "gcd",
         "sin",
+        "asin",
         "sinh",
+        "asinh",
+        "cos",
+        "acos",
+        "cosh",
+        "acosh",
+        "tan",
+        "atan",
+        "tanh",
+        "atanh",
+        "log",
+        "log2",
+        "log10",
+        "ln",
         "sum",
         "average",
         "median",
@@ -34,8 +41,25 @@ pub fn registerKeywords(equation: *Cal.Equation) !void {
     }, &[_]Cal.KeywordInfo{
         .{ .F = .{ .l = 1, .ptr = sqrt } },
         .{ .F = .{ .l = 1, .ptr = abs } },
+        .{ .F = .{ .l = 1, .ptr = exp } },
+        .{ .F = .{ .l = 1, .ptr = exp2 } },
+        .{ .F = .{ .l = 2, .ptr = gcd } },
         .{ .F = .{ .l = 1, .ptr = sin } },
+        .{ .F = .{ .l = 1, .ptr = asin } },
         .{ .F = .{ .l = 1, .ptr = sinh } },
+        .{ .F = .{ .l = 1, .ptr = asinh } },
+        .{ .F = .{ .l = 1, .ptr = cos } },
+        .{ .F = .{ .l = 1, .ptr = acos } },
+        .{ .F = .{ .l = 1, .ptr = cosh } },
+        .{ .F = .{ .l = 1, .ptr = acosh } },
+        .{ .F = .{ .l = 1, .ptr = tan } },
+        .{ .F = .{ .l = 1, .ptr = atan } },
+        .{ .F = .{ .l = 1, .ptr = tanh } },
+        .{ .F = .{ .l = 1, .ptr = atanh } },
+        .{ .F = .{ .l = 2, .ptr = log } },
+        .{ .F = .{ .l = 1, .ptr = log2 } },
+        .{ .F = .{ .l = 1, .ptr = log10 } },
+        .{ .F = .{ .l = 1, .ptr = ln } },
         .{ .F = .{ .l = 0, .ptr = sum } },
         .{ .F = .{ .l = 0, .ptr = average } },
         .{ .F = .{ .l = 0, .ptr = median } },
@@ -50,31 +74,130 @@ pub fn registerKeywords(equation: *Cal.Equation) !void {
 
 // Math functions
 
-fn sqrt(i: []f64) !f64 {
+fn sqrt(i: []const f64) !f64 {
     std.debug.assert(i.len == 1);
     return std.math.sqrt(i[0]);
 }
 
-fn abs(i: []f64) !f64 {
+fn abs(i: []const f64) !f64 {
     std.debug.assert(i.len == 1);
     return if (i[0] < 0) -i[0] else i[0];
 }
 
+fn exp(i: []const f64) !f64 {
+    std.debug.assert(i.len == 1);
+    return std.math.exp(i[0]);
+}
+
+fn exp2(i: []const f64) !f64 {
+    std.debug.assert(i.len == 1);
+    return std.math.exp2(i[0]);
+}
+
+/// TODO: Write unit test
+fn gcd(i: []const f64) !f64 {
+    std.debug.assert(i.len == 2);
+    if (i[0] <= 0 or
+        i[1] <= 0 or
+        i[0] > std.math.maxInt(u64) or
+        i[1] > std.math.maxInt(u64))
+    {
+        return Cal.Error.FnArgBoundsViolated;
+    }
+    const num_1: u64 = @intFromFloat(i[0]);
+    const num_2: u64 = @intFromFloat(i[1]);
+
+    return @floatFromInt(std.math.gcd(num_1, num_2));
+}
+
+// fn lcm(i: []f64) !f64 {
+//     std.debug.assert(i.len == 1);
+//     return std.math.lcm(i[0]); // TODO
+// }
+
 // Trigonometry functions
 
-fn sin(i: []f64) !f64 {
+fn sin(i: []const f64) !f64 {
     std.debug.assert(i.len == 1);
     return std.math.sin(i[0]);
 }
 
-fn sinh(i: []f64) !f64 {
+fn asin(i: []const f64) !f64 {
+    std.debug.assert(i.len == 1);
+    return std.math.asin(i[0]);
+}
+
+fn sinh(i: []const f64) !f64 {
     std.debug.assert(i.len == 1);
     return std.math.sinh(i[0]);
 }
 
+fn asinh(i: []const f64) !f64 {
+    std.debug.assert(i.len == 1);
+    return std.math.asinh(i[0]);
+}
+
+fn cos(i: []const f64) !f64 {
+    std.debug.assert(i.len == 1);
+    return std.math.cos(i[0]);
+}
+
+fn acos(i: []const f64) !f64 {
+    std.debug.assert(i.len == 1);
+    return std.math.acos(i[0]);
+}
+
+fn cosh(i: []const f64) !f64 {
+    std.debug.assert(i.len == 1);
+    return std.math.cosh(i[0]);
+}
+fn acosh(i: []const f64) !f64 {
+    std.debug.assert(i.len == 1);
+    return std.math.acosh(i[0]);
+}
+
+fn tan(i: []const f64) !f64 {
+    std.debug.assert(i.len == 1);
+    return std.math.tan(i[0]);
+}
+
+fn atan(i: []const f64) !f64 {
+    std.debug.assert(i.len == 1);
+    return std.math.atan(i[0]);
+}
+
+fn tanh(i: []const f64) !f64 {
+    std.debug.assert(i.len == 1);
+    return std.math.tanh(i[0]);
+}
+
+fn atanh(i: []const f64) !f64 {
+    std.debug.assert(i.len == 1);
+    return std.math.atanh(i[0]);
+}
+
+fn log(i: []const f64) !f64 {
+    std.debug.assert(i.len == 2);
+    return std.math.log(f64, i[0], i[1]);
+}
+fn log2(i: []const f64) !f64 {
+    std.debug.assert(i.len == 1);
+    return std.math.log2(i[0]);
+}
+fn log10(i: []const f64) !f64 {
+    std.debug.assert(i.len == 1);
+    return std.math.log10(i[0]);
+}
+fn ln(i: []const f64) !f64 {
+    std.debug.assert(i.len == 1);
+    return std.math.log(f64, std.math.e, i[0]);
+}
+
 // Statistics functions
 
-fn sum(i: []f64) !f64 {
+/// TODO: Write unit test
+fn sum(i: []const f64) !f64 {
+    std.debug.assert(i.len > 0);
     var s: f64 = 0;
     for (i) |j| {
         s += j;
@@ -82,18 +205,59 @@ fn sum(i: []f64) !f64 {
     return s;
 }
 
-fn average(i: []f64) !f64 {
+test "sum" {
+    const inputs = [_][]const f64{
+        &[_]f64{0},
+        &[_]f64{1},
+        &[_]f64{-1},
+        &[_]f64{ 1, 1 },
+        &[_]f64{ 1, 2, 3 },
+        &[_]f64{ -1, 0, 1 },
+        &[_]f64{ -1, 0, 3 },
+    };
+    const outputs = [inputs.len]f64{
+        0, 1, -1, 2, 6, 0, 2,
+    };
+    inline for (inputs, outputs) |i, o| {
+        try std.testing.expectEqual(try sum(i), o);
+    }
+}
+
+/// TODO: Write unit test
+fn average(i: []const f64) !f64 {
+    std.debug.assert(i.len > 0);
     return try sum(i) / @as(f64, @floatFromInt(i.len));
 }
 
+test "average" {
+    const inputs = [_][]const f64{
+        &[_]f64{0},
+        &[_]f64{1},
+        &[_]f64{ -1, 1 },
+        &[_]f64{ 1, 2, 3 },
+        &[_]f64{ -1, -2, -3 },
+        &[_]f64{ -1, 2, -1 },
+    };
+    const outputs = [inputs.len]f64{
+        0, 1, 0, 2, -2, 0,
+    };
+    inline for (inputs, outputs) |i, o| {
+        try std.testing.expectEqual(try average(i), o);
+    }
+}
+
+/// TODO: Write unit test
 fn median(i: []f64) !f64 {
-    std.sort.pdq(f64, i, {}, std.sort.asc(f64));
+    std.debug.assert(i.len > 0);
+    const half_len = i.len / 2;
+    std.sort.heap(f64, i, {}, std.sort.asc(f64));
     return switch (i.len % 2 == 0) {
-        true => return average(i[i.len / 2 - 1 .. i.len / 2 + 1]),
-        false => return i[i.len / 2],
+        true => return average(i[half_len - 1 .. half_len + 1]),
+        false => return i[half_len],
     };
 }
 
+/// TODO: Write unit test
 fn mode(i: []f64) !f64 {
     std.debug.assert(i.len > 0);
     std.sort.heap(f64, i, {}, std.sort.asc(f64));
@@ -116,7 +280,8 @@ fn mode(i: []f64) !f64 {
     return current_longest;
 }
 
-fn min(i: []f64) !f64 {
+/// TODO: Write unit test
+fn min(i: []const f64) !f64 {
     std.debug.assert(i.len > 0);
     var smallest = i[0];
     for (i) |j| {
@@ -125,7 +290,8 @@ fn min(i: []f64) !f64 {
     return smallest;
 }
 
-fn max(i: []f64) !f64 {
+/// TODO: Write unit test
+fn max(i: []const f64) !f64 {
     std.debug.assert(i.len > 0);
     var biggest = i[0];
     for (i) |j| {

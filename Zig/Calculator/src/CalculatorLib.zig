@@ -96,19 +96,19 @@ const Operator = enum(u8) {
 };
 
 pub const KeywordInfo = union(enum) {
-    const Function = struct {
-        l: usize,
+    const FunctionInfo = struct {
+        arg_length: usize,
         ptr: *const fn ([]f64) anyerror!f64,
     };
 
     /// Return
-    R: anyerror,
+    Command: anyerror,
     /// Function
-    F: Function,
+    Function: FunctionInfo,
     /// String
-    S: *const fn ([]const u8) anyerror!f64,
+    StrFunction: *const fn ([]const u8) anyerror!f64,
     /// Constant
-    C: f64,
+    Constant: f64,
 };
 
 /// Must be freed due to hashmap
@@ -142,9 +142,9 @@ pub const Equation = struct {
         try self.addKeywords(
             &[_][]const u8{ "a", "ans", "answer" },
             &[_]KeywordInfo{
-                .{ .C = prev_ans },
-                .{ .C = prev_ans },
-                .{ .C = prev_ans },
+                .{ .Constant = prev_ans },
+                .{ .Constant = prev_ans },
+                .{ .Constant = prev_ans },
             },
         );
     }
@@ -216,10 +216,10 @@ pub const InfixEquation = struct {
         var len: ?usize = null;
         var arg_counter: usize = 0;
         switch (keywordInfo) {
-            .R => |err| return err,
-            .F => |info| len = info.l,
-            .S => {},
-            .C => return,
+            .Command => |err| return err,
+            .Function => |info| len = info.arg_length,
+            .StrFunction => {},
+            .Constant => return,
         }
         const token = tokens.next();
         if (token.tag != .left_paren) {
@@ -442,8 +442,8 @@ pub const PostfixEquation = struct {
     fn evaluateKeyword(self: Self, tokens: *Tokenizer, token_slice: []const u8) anyerror!f64 {
         const keyword = self.keywords.get(token_slice).?;
         switch (keyword) {
-            .R => unreachable,
-            .F => |info| {
+            .Command => unreachable,
+            .Function => |info| {
                 _ = tokens.next();
                 var args = std.ArrayList(f64).init(self.allocator);
                 defer args.deinit();
@@ -464,7 +464,7 @@ pub const PostfixEquation = struct {
                 defer self.allocator.free(arg_slice);
                 return info.ptr(arg_slice);
             },
-            .S => |ptr| {
+            .StrFunction => |ptr| {
                 _ = tokens.next();
                 const start = tokens.next().start;
                 var end: usize = undefined;
@@ -477,7 +477,7 @@ pub const PostfixEquation = struct {
                 }
                 return ptr(tokens.buffer[start..end]);
             },
-            .C => |data| return data,
+            .Constant => |data| return data,
         }
     }
 

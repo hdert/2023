@@ -1,5 +1,3 @@
-/// TODO:
-/// - Fix tests
 const std = @import("std");
 const Stack = @import("Stack");
 const c = @import("CalculatorLib.zig");

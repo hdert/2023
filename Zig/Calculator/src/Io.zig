@@ -4,7 +4,7 @@
 //! TODO:
 //! - Implement function that prints all keywords prettily with as much
 //! information as possible.
-//! - Update help function to hint to this keyword
+//!     - Is not very pretty
 const std = @import("std");
 const Cal = @import("CalculatorLib.zig");
 
@@ -38,15 +38,15 @@ pub fn registerKeywords(equation: *Cal.Equation) !void {
         "close",
         "keywords",
     }, &[_]Cal.KeywordInfo{
-        .{ .R = Error.Help },
-        .{ .R = Error.Help },
-        .{ .R = Error.Exit },
-        .{ .R = Error.Exit },
-        .{ .R = Error.Exit },
-        .{ .R = Error.Exit },
-        .{ .R = Error.Exit },
-        .{ .R = Error.Exit },
-        .{ .R = Error.Keywords },
+        .{ .Command = Error.Help },
+        .{ .Command = Error.Help },
+        .{ .Command = Error.Exit },
+        .{ .Command = Error.Exit },
+        .{ .Command = Error.Exit },
+        .{ .Command = Error.Exit },
+        .{ .Command = Error.Exit },
+        .{ .Command = Error.Exit },
+        .{ .Command = Error.Keywords },
     });
 }
 
@@ -183,19 +183,19 @@ pub fn printKeywords(self: Self, equation: Cal.Equation) !void {
     var iterator = equation.keywords.iterator();
     while (true) {
         const entry = iterator.next() orelse break;
-        if (entry.value_ptr.* != .R)
+        if (entry.value_ptr.* != .Command)
             try self.stdout.print("{s}: ", .{entry.key_ptr.*});
         switch (entry.value_ptr.*) {
-            .R => continue,
-            .F => |function| {
-                if (function.l == 0) {
+            .Command => continue,
+            .Function => |function| {
+                if (function.arg_length == 0) {
                     try self.stdout.writeAll("function with infinite arguments\n");
                 } else {
-                    try self.stdout.print("function with {d} arguments\n", .{function.l});
+                    try self.stdout.print("function with {d} arguments\n", .{function.arg_length});
                 }
             },
-            .S => try self.stdout.writeAll("function with string input\n"),
-            .C => |num| {
+            .StrFunction => try self.stdout.writeAll("function with string input\n"),
+            .Constant => |num| {
                 try self.stdout.print("constant with value {d}\n", .{num});
             },
         }

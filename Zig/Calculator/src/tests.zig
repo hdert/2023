@@ -2,7 +2,9 @@ const std = @import("std");
 const Stack = @import("Stack");
 const c = @import("CalculatorLib.zig");
 const testing = std.testing;
-const allocator = std.testing.allocator;
+const allocator = std.testing.allocator; // I regret having this as a global
+const Allocator = std.mem.Allocator; // This is a good idea though
+const check_allocation_failures = true;
 
 const testData = struct {
     infix_equations: []const []const u8,
@@ -150,7 +152,7 @@ test "isError" {
     }
 }
 
-test "InfixEquation.fromString" {
+fn infixEquationFromStringTest(alloc: Allocator) !void {
     const fail_cases = [_]?[]const u8{
         "-",       "10++10",     "10(*10)",
         "10(10*)", "10*",        "10(10)*",
@@ -166,7 +168,7 @@ test "InfixEquation.fromString" {
         ")",       "(",          "(1",
         "æ",      ")",          "1)",
     };
-    var eq = try c.Equation.init(allocator, null, null);
+    var eq = try c.Equation.init(alloc, null, null);
     defer eq.free();
     try eq.registerPreviousAnswer(0);
     for (test_cases.infix_equations, 0..) |case, i| {
@@ -193,8 +195,16 @@ test "InfixEquation.fromString" {
     }
 }
 
-test "InfixEquation.toPostfixEquation" {
-    var eq = try c.Equation.init(allocator, null, null);
+test "InfixEquation.fromString" {
+    if (check_allocation_failures) {
+        try testing.checkAllAllocationFailures(allocator, infixEquationFromStringTest, .{});
+    } else {
+        try infixEquationFromStringTest(allocator);
+    }
+}
+
+fn infixEquationToPostfixEquationTest(alloc: Allocator) !void {
+    var eq = try c.Equation.init(alloc, null, null);
     defer eq.free();
     for (
         test_cases.infix_equations,
@@ -206,27 +216,22 @@ test "InfixEquation.toPostfixEquation" {
         const postfixEquation = try infixEquation.toPostfixEquation();
         defer postfixEquation.free();
         try testing.expectEqualSlices(u8, postfix, postfixEquation.data);
+        const postfixEquation2 = try c.PostfixEquation.fromInfixEquation(infixEquation);
+        defer postfixEquation2.free();
+        try testing.expectEqualSlices(u8, postfix, postfixEquation2.data);
     }
 }
 
-test "PostfixEquation.fromInfixEquation" {
-    var eq = try c.Equation.init(allocator, null, null);
-    defer eq.free();
-    for (
-        test_cases.infix_equations,
-        test_cases.postfix_equations,
-        test_cases.inputs,
-    ) |infix, postfix, input| {
-        try eq.registerPreviousAnswer(input);
-        const infixEquation = try eq.newInfixEquation(infix, null);
-        const postfixEquation = try c.PostfixEquation.fromInfixEquation(infixEquation);
-        defer postfixEquation.free();
-        try testing.expectEqualSlices(u8, postfix, postfixEquation.data);
+test "InfixEquation.toPostfixEquation" {
+    if (check_allocation_failures) {
+        try testing.checkAllAllocationFailures(allocator, infixEquationEvaluateTest, .{});
+    } else {
+        try infixEquationEvaluateTest(allocator);
     }
 }
 
-test "InfixEquation.evaluate" {
-    var eq = try c.Equation.init(allocator, null, null);
+fn infixEquationEvaluateTest(alloc: Allocator) !void {
+    var eq = try c.Equation.init(alloc, null, null);
     defer eq.free();
     for (
         test_cases.infix_equations,
@@ -248,13 +253,15 @@ test "InfixEquation.evaluate" {
     }
 }
 
-test "PostfixEquation.evaluate" {
-    const fail_cases = [_][]const u8{
-        "10 0 /",       "10 0 %",
-        "10 10 10 - /", "10 10 10 - %",
-        "10 0 /",       "10 0 %",
-        "--10",
-    };
+test "InfixEquation.evaluate" {
+    if (check_allocation_failures) {
+        try testing.checkAllAllocationFailures(allocator, infixEquationEvaluateTest, .{});
+    } else {
+        try infixEquationEvaluateTest(allocator);
+    }
+}
+
+fn postfixEquationEvaluateTestPass(alloc: std.mem.Allocator) !void {
     var eq = try c.Equation.init(allocator, null, null);
     defer eq.free();
     for (
@@ -263,7 +270,7 @@ test "PostfixEquation.evaluate" {
     ) |postfix, result| {
         const postfix_equation = c.PostfixEquation{
             .data = postfix,
-            .allocator = allocator,
+            .allocator = alloc,
             .keywords = eq.keywords,
         };
         const output = try postfix_equation.evaluate();
@@ -276,15 +283,43 @@ test "PostfixEquation.evaluate" {
             return err;
         };
     }
+}
+
+fn postfixEquationEvaluateTestFail(alloc: std.mem.Allocator) !void {
+    var eq = try c.Equation.init(allocator, null, null);
+    defer eq.free();
+    const fail_cases = [_][]const u8{
+        "10 0 /",       "10 0 %",
+        "10 10 10 - /", "10 10 10 - %",
+        "10 0 /",       "10 0 %",
+        "--10",
+    };
     for (fail_cases) |case| {
         const postfix_equation = c.PostfixEquation{
             .data = case,
-            .allocator = allocator,
+            .allocator = alloc,
             .keywords = eq.keywords,
         };
         const result = postfix_equation.evaluate();
         if (result) |_| {
             return error.NotFail;
-        } else |_| {}
+        } else |err| {
+            switch (err) {
+                Allocator.Error.OutOfMemory => return err,
+                else => {},
+            }
+        }
     }
 }
+
+test "PostfixEquation.evaluate" {
+    if (check_allocation_failures) {
+        try testing.checkAllAllocationFailures(allocator, postfixEquationEvaluateTestPass, .{});
+        try testing.checkAllAllocationFailures(allocator, postfixEquationEvaluateTestFail, .{});
+    } else {
+        try postfixEquationEvaluateTestPass(allocator);
+        try postfixEquationEvaluateTestFail(allocator);
+    }
+}
+
+test "allocationFailures" {}

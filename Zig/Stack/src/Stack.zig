@@ -18,7 +18,7 @@ pub fn Stack(comptime T: type) type {
             self.data.deinit();
         }
 
-        pub fn push(self: *Self, item: T) !void {
+        pub fn push(self: *Self, item: T) Allocator.Error!void {
             try self.data.append(item);
         }
 

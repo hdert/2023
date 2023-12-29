@@ -72,6 +72,7 @@ pub fn next(self: *Self) Token {
                 },
                 else => {
                     result.tag = .invalid;
+                    self.index += 1;
                     break;
                 },
             },

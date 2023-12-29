@@ -40,8 +40,7 @@ pub fn Stack(comptime T: type) type {
     };
 }
 
-test "Stack" {
-    const allocator = std.testing.allocator;
+fn stackTest(allocator: Allocator) !void {
     var stack = Stack(u64).init(allocator);
     defer stack.free();
 
@@ -66,8 +65,11 @@ test "Stack" {
     try testing.expectEqual(stack.len(), 2);
 }
 
-test "No memleak" {
-    const allocator = std.testing.allocator;
+test "Stack" {
+    try testing.checkAllAllocationFailures(std.testing.allocator, stackTest, .{});
+}
+
+fn noMemleakTest(allocator: Allocator) !void {
     var stack = Stack(u64).init(allocator);
     defer stack.free();
 
@@ -82,4 +84,8 @@ test "No memleak" {
     }
 
     try testing.expectEqual(stack.len(), 300);
+}
+
+test "No memleak" {
+    try testing.checkAllAllocationFailures(std.testing.allocator, noMemleakTest, .{});
 }

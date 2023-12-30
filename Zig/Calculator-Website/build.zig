@@ -5,20 +5,24 @@ pub fn build(b: *std.Build) void {
 
     // WASM library
 
-    const lib = b.addSharedLibrary(.{
+    const exe = b.addExecutable(.{
         .name = "Calculator",
         .root_source_file = .{ .path = "wasm.zig" },
         .target = .{ .cpu_arch = .wasm32, .os_tag = .freestanding },
         .optimize = .ReleaseFast,
     });
-    lib.addModule("Calculator", calculator.module("Calculator"));
-    lib.addModule("Addons", calculator.module("Addons"));
-    const lib_output = b.addInstallArtifact(lib, .{
+    exe.addModule("Calculator", calculator.module("Calculator"));
+    exe.addModule("Addons", calculator.module("Addons"));
+
+    exe.entry = .disabled;
+    exe.rdynamic = true;
+
+    const output = b.addInstallArtifact(exe, .{
         .dest_dir = .{
             .override = .{
                 .custom = "Calculator",
             },
         },
     });
-    b.getInstallStep().dependOn(&lib_output.step);
+    b.getInstallStep().dependOn(&output.step);
 }

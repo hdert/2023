@@ -14,7 +14,7 @@ pub fn build(b: *std.Build) !void {
     const stack = b.dependency("stack", .{});
     const tokenizer = b.addModule("Tokenizer", .{ .source_file = .{ .path = "src/Tokenizer.zig" } });
     const calculator = b.addModule("Calculator", .{
-        .source_file = .{ .path = "src/CalculatorLib.zig" },
+        .source_file = .{ .path = "src/Calculator.zig" },
         .dependencies = &.{ .{
             .name = "Tokenizer",
             .module = tokenizer,
@@ -102,7 +102,7 @@ pub fn build(b: *std.Build) !void {
     });
     lib_unit_tests.addModule("Calculator", calculator);
     const calc_unit_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/CalculatorLib.zig" },
+        .root_source_file = .{ .path = "src/Calculator.zig" },
         .target = target,
         .optimize = optimize,
     });

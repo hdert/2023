@@ -11,7 +11,7 @@ const targets: []const std.zig.CrossTarget = &.{
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const stack = b.addModule("Stack", .{ .source_file = .{ .path = "../Stack/src/Stack.zig" } });
+    const stack = b.dependency("stack", .{});
     const tokenizer = b.addModule("Tokenizer", .{ .source_file = .{ .path = "src/Tokenizer.zig" } });
     const calculator = b.addModule("Calculator", .{
         .source_file = .{ .path = "src/CalculatorLib.zig" },
@@ -20,7 +20,7 @@ pub fn build(b: *std.Build) !void {
             .module = tokenizer,
         }, .{
             .name = "Stack",
-            .module = stack,
+            .module = stack.module("Stack"),
         } },
     });
     const io = b.addModule("Io", .{

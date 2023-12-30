@@ -1,6 +1,5 @@
 const std = @import("std");
-const Stack = @import("Stack");
-const c = @import("CalculatorLib.zig");
+const c = @import("Calculator");
 const testing = std.testing;
 const allocator = std.testing.allocator; // I regret having this as a global
 const Allocator = std.mem.Allocator; // This is a good idea though
@@ -135,10 +134,6 @@ const test_cases: testData = .{
 };
 
 test {
-    _ = @import("CalculatorLib.zig");
-}
-
-test {
     _ = @import("Io.zig");
 }
 
@@ -167,6 +162,9 @@ fn infixEquationFromStringTest(alloc: Allocator) !void {
         "10-*10",  "_",          "+",
         ")",       "(",          "(1",
         "æ",      ")",          "1)",
+        ",",       "\x00",       "(,)",
+        "1+,",     "-,",         "1,",
+        "1),",     "(1,)",
     };
     var eq = try c.Equation.init(alloc, null, null);
     defer eq.free();
@@ -231,7 +229,13 @@ test "InfixEquation.toPostfixEquation" {
 }
 
 fn infixEquationEvaluateTest(alloc: Allocator) !void {
-    var eq = try c.Equation.init(alloc, null, null);
+    var eq = try c.Equation.init(
+        alloc,
+        &.{"a"},
+        &.{c.KeywordInfo{
+            .Constant = 0,
+        }},
+    );
     defer eq.free();
     for (
         test_cases.infix_equations,
@@ -321,5 +325,3 @@ test "PostfixEquation.evaluate" {
         try postfixEquationEvaluateTestFail(allocator);
     }
 }
-
-test "allocationFailures" {}

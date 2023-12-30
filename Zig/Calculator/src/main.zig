@@ -1,7 +1,7 @@
 const std = @import("std");
-const Calculator = @import("CalculatorLib.zig");
-const Io = @import("Io.zig");
-const Addons = @import("addons.zig");
+const Calculator = @import("Calculator");
+const Io = @import("Io");
+const Addons = @import("Addons");
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();

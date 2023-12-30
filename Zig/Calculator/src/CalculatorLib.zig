@@ -11,10 +11,25 @@
 //!     - I don't think this is necessary, I can just keep copying data
 //!     - Something else needs to be done to organize the code though
 //! - Find way to do fuzzing
+//!     - Fuzzing doesn't have to include input, but it needs to be both
+//!     end-to-end, and unit based to also check function interaction.
+//!     - Fuzzing should be 'smart' i.e. checking which code paths have and
+//!     haven't been triggered
+//!     - Fuzzing should check if non-internal or non-expected errors are thrown
+//!     or that asserts have failed or unreachables have been reached.
+//!     - Current testing already tests that valid input works, and invalid input
+//!     doesn't, we just want to check for UB and crashes.
+//! - Find way to do end-to-end testing with custom file reader
+//!     - Use result generator and writer to test entire user text
+//!     to ensure that it never changes, and if it does, to highlight it
+//!     - This will finally include error results and error types
+//!     - Integrate this with fuzzing
+//!     - Use std.testing.tmpDir
+//! - Performance testing
 
 const std = @import("std");
 const Stack = @import("Stack");
-const Tokenizer = @import("Tokenizer.zig");
+const Tokenizer = @import("Tokenizer");
 const testing = std.testing;
 
 pub const Error = error{
@@ -298,9 +313,9 @@ pub const InfixEquation = struct {
                     .float, .keyword => state = .operator,
                 },
                 .float => state = .float,
-                .minus => switch (state) {
-                    .start, .operator, .paren, .minus => state = .minus,
-                    .float, .keyword => state = .operator,
+                .minus => state = switch (state) {
+                    .start, .operator, .paren, .minus => .minus,
+                    .float, .keyword => .operator,
                 },
                 .left_paren => {
                     paren_counter += 1;

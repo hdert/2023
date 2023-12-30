@@ -5,8 +5,9 @@
 //! - Implement function that prints all keywords prettily with as much
 //! information as possible.
 //!     - Is not very pretty
+//! - See if I can implement better stdin clearing with delimiter \000
 const std = @import("std");
-const Cal = @import("CalculatorLib.zig");
+const Cal = @import("Calculator");
 
 pub const Error = error{
     Help,

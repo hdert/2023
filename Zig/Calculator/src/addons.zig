@@ -3,7 +3,7 @@
 //! - Write unit tests for non-standard functions
 //! - Write end-to-end testing for addons
 const std = @import("std");
-const Cal = @import("CalculatorLib.zig");
+const Cal = @import("Calculator");
 
 pub fn registerKeywords(equation: *Cal.Equation) !void {
     try equation.addKeywords(&[_][]const u8{

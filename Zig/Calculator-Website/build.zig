@@ -20,7 +20,7 @@ pub fn build(b: *std.Build) void {
     const output = b.addInstallArtifact(exe, .{
         .dest_dir = .{
             .override = .{
-                .custom = "Calculator",
+                .custom = "../",
             },
         },
     });

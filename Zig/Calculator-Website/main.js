@@ -1,17 +1,6 @@
-// Currently doesn't work because wasi code doesn't work on the browser
-// and the freestanding target doesn't work, and we aren't passing the export
-// memory flag to the wasm-linker when building with zig.
-
-// import wasm from "./zig-out/Calculator/Calculator.wasm";
-
 const module = await WebAssembly.compileStreaming(
   fetch("./zig-out/Calculator/Calculator.wasm")
 );
-
-// request = new XMLHttpRequest();
-// request.open("GET", "zig-out/Calculator/Calculator.wasm");
-// request.responseType = "arraybuffer";
-// request.send();
 
 const encodeString = (string) => {
   const buffer = new TextEncoder().encode(string);
@@ -50,3 +39,14 @@ const {
 });
 
 console.log(evaluate(encodeString("10+10")));
+
+var input = window.document.getElementById("input");
+var button = window.document.getElementById("submit");
+var form = window.document.getElementById("form");
+
+form.addEventListener("submit", processSubmission);
+
+function processSubmission(e) {
+  e.preventDefault();
+  input.value = evaluate(encodeString(input.value));
+}

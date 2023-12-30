@@ -1,6 +1,6 @@
 const std = @import("std");
-const Cal = @import("CalculatorLib.zig");
-const Addons = @import("addons.zig");
+const Cal = @import("Calculator");
+const Addons = @import("Addons");
 
 pub const Result = extern struct {
     result: Return,
